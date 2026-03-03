@@ -1,0 +1,355 @@
+---
+title: 'edit'
+description: 'Modify existing password entries in your vault'
+---
+
+## Usage
+
+```bash
+BLANK edit [search]
+```
+
+Edit an existing password entry in your vault. Interactively select which fields to update with support for password generation.
+
+## Arguments
+
+<ParamField path="search" type="string" optional>
+  Search term to find the entry you want to edit. Matches against entry titles.
+  
+  If omitted or multiple matches found, you'll be prompted to select from a list.
+</ParamField>
+
+## Examples
+
+### Edit Specific Entry
+
+```bash
+# Search and edit GitHub entry
+BLANK edit github
+```
+
+### Browse and Edit
+
+```bash
+# List all entries and select one to edit
+BLANK edit
+```
+
+## Interactive Workflow
+
+### Step 1: Find Entry
+
+If you provide a search term:
+
+```bash
+$ BLANK edit github
+
+✓ Vault unlocked
+✓ Searching...
+```
+
+If multiple matches are found, select from the list:
+
+```bash
+  Found 2 entries:
+
+? Select entry:
+  1. GitHub Personal - 2/20/2024
+  2. GitHub Work - 2/15/2024
+```
+
+### Step 2: View Current Values
+
+Current entry details are displayed:
+
+```bash
+  Current Values for "GitHub Personal":
+  ──────────────────────────────────────────────────
+  Title:    GitHub Personal
+  Username: myuser@email.com
+  Password: ************
+  URL:      https://github.com
+  Notes:    Personal account with 2FA enabled
+  ──────────────────────────────────────────────────
+```
+
+### Step 3: Select Fields to Edit
+
+Choose which fields you want to change:
+
+```bash
+? Select fields to edit: (Press <space> to select)
+  ◯ Title (current: GitHub Personal)
+  ◯ Username (current: myuser@email.com)
+  ◉ Password (currently set)
+  ◯ URL (current: https://github.com)
+  ◯ Notes (currently set)
+```
+
+<Note>
+You must select at least one field to continue.
+</Note>
+
+### Step 4: Update Field Values
+
+For each selected field, you'll be prompted for the new value:
+
+#### Title
+
+```bash
+? New title: GitHub Work Account
+```
+
+#### Username
+
+```bash
+? New username (leave empty to remove): newuser@company.com
+```
+
+#### Password
+
+Special password prompt with generation options:
+
+```bash
+? New password:
+  🔐 Generate strong password
+  📝 Generate passphrase
+  ✏️  Enter manually
+  🗑️  Remove password
+  ⏭️  Keep current password
+```
+
+**Generate Strong Password:**
+```bash
+  Generated: xK9$mP2#nQ8@vL5!yT3%
+  Strength:  EXCELLENT (128 bits)
+
+? Use this password?
+  ✓ Yes, use this password
+  🔄 Generate another
+  ✏️  Enter manually instead
+```
+
+**Generate Passphrase:**
+```bash
+  Generated: correct-horse-battery-staple-mountain
+  Strength:  STRONG (95 bits)
+
+? Use this password?
+  ✓ Yes, use this password
+  🔄 Generate another
+  ✏️  Enter manually instead
+```
+
+<Tip>
+Generated passwords include strength analysis with entropy calculation.
+</Tip>
+
+#### URL
+
+```bash
+? New URL (leave empty to remove): https://github.com/enterprise
+```
+
+#### Notes
+
+Opens your default text editor for multi-line notes:
+
+```bash
+? Edit notes: (opens editor)
+```
+
+### Step 5: Review Changes
+
+Confirm the changes before applying:
+
+```bash
+  Changes to be applied:
+  ────────────────────────────────────────
+  password: ********
+  url: https://github.com/enterprise
+  ────────────────────────────────────────
+
+? Apply these changes? (Y/n)
+```
+
+### Step 6: Save
+
+```bash
+✓ Entry updated successfully
+
+  "GitHub Work Account" has been updated.
+```
+
+## Editable Fields
+
+All entry fields can be edited:
+
+<ParamField path="title" type="string" required>
+  The entry name. Cannot be empty.
+</ParamField>
+
+<ParamField path="username" type="string" optional>
+  Username or email. Leave empty to remove.
+</ParamField>
+
+<ParamField path="password" type="string" optional>
+  The password. Can be generated, entered manually, kept, or removed.
+</ParamField>
+
+<ParamField path="url" type="string" optional>
+  Website URL. Leave empty to remove.
+</ParamField>
+
+<ParamField path="notes" type="string" optional>
+  Multi-line notes. Opens in your default editor. Leave empty to remove.
+</ParamField>
+
+## Password Generation
+
+When editing the password field, you can generate secure passwords:
+
+### Strong Password Preset
+
+- Length: 20 characters
+- Includes: uppercase, lowercase, numbers, symbols
+- Entropy: ~128 bits
+- Example: `xK9$mP2#nQ8@vL5!yT3%`
+
+### Passphrase
+
+- Words: 5 random words
+- Separator: hyphens
+- Entropy: ~95 bits
+- Example: `correct-horse-battery-staple-mountain`
+
+### Password Strength Levels
+
+Generated passwords show strength ratings:
+
+- **EXCELLENT**: 100+ bits entropy
+- **STRONG**: 80-99 bits entropy
+- **GOOD**: 60-79 bits entropy
+- **FAIR**: 40-59 bits entropy
+- **WEAK**: < 40 bits entropy
+
+<Tip>
+Aim for at least "STRONG" strength for important accounts.
+</Tip>
+
+## Behavior
+
+### No Changes Detected
+
+If you don't change any values:
+
+```bash
+  No changes detected.
+```
+
+### Cancel Confirmation
+
+If you choose not to apply changes:
+
+```bash
+  Edit cancelled.
+```
+
+### Password Tracking
+
+When the password field is updated:
+- `passwordLastChanged` timestamp is automatically updated
+- This is used for password expiry tracking
+- View with `BLANK audit`
+
+## Security Features
+
+### Audit Logging
+
+Edit operations are logged:
+
+- **Event Type**: `entry_updated`
+- **Logged Data**: Entry ID and title
+- **Timestamp**: Automatically recorded
+
+View audit logs:
+
+```bash
+BLANK audit
+```
+
+### Vault Unlocking
+
+If your vault is locked:
+
+```bash
+? Enter master password: ********
+✓ Vault unlocked
+```
+
+### Duress Mode Protection
+
+<Note>
+In duress mode, the edit command appears to work but no actual changes are saved to the vault.
+</Note>
+
+Duress mode behavior:
+- Shows fake decoy entries
+- Accepts all edits normally
+- Displays success messages
+- No data is actually modified
+
+## File Entries
+
+<Note>
+The edit command only works with password entries, not uploaded files.
+</Note>
+
+File entries are filtered out when browsing:
+
+```bash
+  No password entries to edit.
+```
+
+To manage files, use:
+
+```bash
+BLANK download <search>
+BLANK delete <search>
+```
+
+## Error Handling
+
+### Vault Not Found
+
+```bash
+  No vault found. Run "BLANK init" first.
+```
+
+### Entry Not Found
+
+```bash
+  No entries found matching "nonexistent".
+```
+
+### Unlock Failed
+
+```bash
+✗ Failed to unlock vault
+  Invalid password or corrupted vault
+```
+
+### Save Failed
+
+```bash
+✗ Failed to save changes
+  Unable to write to vault
+```
+
+## Related Commands
+
+- [`add`](/commands/add) - Add new entries
+- [`get`](/commands/get) - View entries
+- [`delete`](/commands/delete) - Remove entries
+- [`list`](/commands/list) - List all entries
+- [`generate`](/commands/generate) - Generate passwords standalone

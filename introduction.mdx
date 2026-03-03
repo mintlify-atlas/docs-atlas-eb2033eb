@@ -1,0 +1,139 @@
+---
+title: Introduction
+description: Client-side, zero-knowledge vault for passwords, notes, TOTP secrets, and encrypted files synced to Google Drive
+---
+
+## Welcome to BlankDrive
+
+BlankDrive is a **client-side, zero-knowledge vault** that puts you in complete control of your sensitive data. Store passwords, notes, TOTP secrets, and encrypted files, all synced securely to your own Google Drive account.
+
+<Note>
+  **Zero-Knowledge Architecture**: Your data is encrypted on your device before it ever reaches the cloud. BlankDrive never sees your plaintext data or master password.
+</Note>
+
+## Why BlankDrive?
+
+BlankDrive is designed for people who want cloud-backed storage without sending plaintext to any third-party backend.
+
+<CardGroup cols={2}>
+  <Card title="Client-Side Only" icon="laptop">
+    No backend auth server. No remote token broker. Everything runs on your machine.
+  </Card>
+  <Card title="Military-Grade Encryption" icon="shield-halved">
+    AES-256-GCM encryption with Argon2id key derivation protects your vault.
+  </Card>
+  <Card title="Your Google Drive" icon="google">
+    Encrypted data syncs to your own Google Drive account. You control the cloud storage.
+  </Card>
+  <Card title="Zero Trust" icon="lock">
+    OAuth runs locally with PKCE. Tokens are encrypted and stored on your device.
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Secure Storage
+- **Password Manager**: Store unlimited passwords with username, URL, and notes
+- **Secure Notes**: Encrypted notes for sensitive information
+- **TOTP Support**: Built-in 2FA token generator
+- **File Encryption**: Upload and encrypt files up to any size (chunked at 20 MB)
+
+### Cloud Sync
+- **Google Drive Integration**: Automatic sync with your Google account
+- **Storage Modes**: Choose between visible (`public`) or hidden (`appDataFolder`) storage
+- **Restore Anywhere**: Pull your encrypted vault from any device with `blankdrive init --restore`
+
+### Security Features
+- **Zero-Knowledge**: Your master password never leaves your device
+- **Duress Mode**: Special unlock mode that shows decoy entries
+- **Security Audit**: Password strength analyzer and breach checker
+- **Auto-Lock**: Configurable timeout to lock vault when idle
+
+### Multiple Interfaces
+- **CLI**: Fast command-line interface (`blankdrive` or `BLANK`)
+- **Interactive Shell**: Rich interactive mode with additional commands
+- **Web UI**: Local web console at `localhost:4310`
+- **Desktop App**: Native Tauri-based desktop application
+
+## Quick Links
+
+<CardGroup cols={3}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install BlankDrive globally via npm or from source
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get your vault running in under 5 minutes
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/architecture">
+    Understand the encryption and sync design
+  </Card>
+</CardGroup>
+
+## Typical Workflow
+
+<Steps>
+  <Step title="Create Local Vault">
+    You create a local vault protected by your master password.
+  </Step>
+  <Step title="Add Entries">
+    You add passwords, notes, and files locally.
+  </Step>
+  <Step title="Encrypt & Sync">
+    BlankDrive encrypts data on-device, then uploads encrypted blobs to your Google Drive.
+  </Step>
+  <Step title="Restore Anywhere">
+    On a new machine, restore using the same Google account and master password.
+  </Step>
+</Steps>
+
+## Real-World Use Cases
+
+- **Secure personal document vault**: IDs, contracts, medical records, financial statements
+- **Encrypted backup**: Off-device backup of sensitive notes and credentials
+- **Cross-device access**: Access your vault from any machine via your Google Drive
+- **Team password sharing**: Share encrypted vault entries (with careful key management)
+
+## Security Specifications
+
+<Info>
+  BlankDrive uses industry-standard cryptography:
+  - **Encryption**: AES-256-GCM with 12-byte IV and 16-byte auth tag
+  - **Key Derivation**: Argon2id with time cost 3, memory cost 64 MB, parallelism 4
+  - **Sub-key Derivation**: HKDF-SHA256 with unique contexts (`index`, `entry`, `metadata`)
+  - **AAD Binding**: Each entry is bound to its ID for integrity verification
+</Info>
+
+## Trust Boundary
+
+**What BlankDrive Does:**
+- ✅ Runs entirely client-side (no project backend)
+- ✅ Encrypts all data before cloud upload
+- ✅ Uses direct OAuth with Google (local loopback + PKCE)
+
+**What BlankDrive Does Not Guarantee:**
+- ⚠️ If your machine is compromised while vault is unlocked, secrets can be exposed
+- ⚠️ Losing your master password means encrypted data cannot be recovered
+- ⚠️ Hidden mode improves privacy but is not a substitute for endpoint security
+
+<Warning>
+  **IMPORTANT**: Your master password is the ONLY way to decrypt your vault. If you lose it, your data is unrecoverable. Store it safely!
+</Warning>
+
+## Current Version
+
+BlankDrive is currently at version **0.1.2** with the following recent improvements:
+- Desktop installer runtime fixes
+- Auth guard on Web UI CLI endpoints
+- Optimized vault iteration for large vaults
+- npm-based CLI self-update flow
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Install BlankDrive" icon="terminal" href="/installation">
+    Get started with npm installation or build from source
+  </Card>
+  <Card title="Quick Start Guide" icon="bolt" href="/quickstart">
+    Initialize your vault and add your first entry
+  </Card>
+</CardGroup>

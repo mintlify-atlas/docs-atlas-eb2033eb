@@ -1,0 +1,142 @@
+---
+title: Changelog
+description: Release history and notable changes for BlankDrive
+---
+
+All notable changes to BlankDrive are documented here. The project follows semantic versioning.
+
+## Current Release
+
+<Note>
+Current stable version: **0.1.2** (March 3, 2026)
+</Note>
+
+---
+
+## [0.1.2] - 2026-03-03
+
+### Fixed
+
+- **Desktop installer runtime startup issue** by bundling root runtime artifacts into Tauri resources (`blankdrive-runtime/dist`, `package.json`, logo asset)
+- **Security:** Added missing `ensureUnlocked()` guard to `/api/cli/run` in the Web UI server, closing local unauthenticated CLI execution risk
+
+### Improved
+
+- **Performance:** Large vault iteration path in `vaultManager` now avoids `Object.entries(...)` tuple allocation overhead and uses safe `for...in` with `Object.hasOwn`
+- **Codebase:** Removed generated `.jules/*` artifacts from merged PR changes
+
+### What's New
+
+This release focuses on stability and security:
+
+- Fixed desktop installer runtime startup by bundling backend runtime files inside Tauri resources
+- Added missing auth guard on `/api/cli/run` in Web UI (`ensureUnlocked()`), closing local unauthenticated CLI execution risk
+- Optimized vault entry iteration path for large vaults with lower allocation overhead
+- Added npm-based CLI self-update flow: `BLANK update --check`, `BLANK update --install`
+
+---
+
+## [0.1.1] - 2026-03-02
+
+### Added
+
+- **Tauri Desktop App:** Official desktop application under `desktop-application/` that launches the shared Node backend
+- **Desktop Installer Command:** CLI command `BLANK desktop` with direct `.exe` download from latest GitHub release
+- **CLI Update Command:** New `BLANK update` command with check/install flows and machine-readable JSON mode
+- **Scheduled Update Checks:** 24-hour scheduled update checks with prompt-to-install flow in CLI and desktop launcher
+- **Desktop Release Pipeline:** Desktop release build/upload job in `publish.yml` for Windows installers (`.exe` / `.msi`)
+- **Branding:** Desktop logo and icon set integration across web UI and desktop packaging
+
+### Improved
+
+- **CLI Help:** Shell startup now highlights desktop install/update commands prominently
+- **Desktop UX:** Desktop launcher UI now includes update prompt actions (`Download & Install` / continue)
+
+### Fixed
+
+- **Desktop Updates:** Update checks now compare against desktop app version when running in Tauri
+- **Update Scheduling:** Update schedule cache now records check attempts even on API/asset lookup failures
+
+---
+
+## [0.0.3] - 2026-02-24
+
+### Added
+
+- **Local Web UI:** Server and command (`BLANK web` / `BLANK ui`) for vault management
+- **Web UI Features:**
+  - Vault init/unlock/lock flows
+  - Entry CRUD operations
+  - Chunked file upload
+  - File download
+  - CLI command execution interface
+- **Shell Improvements:** Improved shell help experience with interactive command picker and `help --list`
+
+### Fixed
+
+- **Auto-authentication:** Automatic Drive authentication bootstrap in file sync/upload/download/cloud-availability paths
+
+---
+
+## [Unreleased]
+
+No unreleased entries yet.
+
+---
+
+## Version History Summary
+
+| Version | Release Date | Highlights |
+|---------|--------------|------------|
+| **0.1.2** | 2026-03-03 | Desktop runtime fix, security improvements, performance optimizations |
+| **0.1.1** | 2026-03-02 | Tauri desktop app, CLI update command, scheduled updates |
+| **0.0.3** | 2026-02-24 | Local web UI, improved shell experience, auto-authentication |
+
+---
+
+## Upgrade Instructions
+
+### CLI Users
+
+```bash
+# Check for updates
+BLANK update --check
+
+# Install latest version
+BLANK update --install
+```
+
+Or manually:
+
+```bash
+npm update -g blankdrive
+```
+
+### Desktop Users
+
+The desktop app automatically checks for updates every 24 hours. You can also:
+
+```bash
+# Download and install latest desktop release
+BLANK desktop --install
+```
+
+---
+
+## Migration Notes
+
+### No Breaking Changes
+
+All releases maintain backward compatibility with existing vaults. Your encrypted data, master password, and OAuth credentials remain unchanged across updates.
+
+<Note>
+Updating BlankDrive does not affect your vault data or require re-authentication.
+</Note>
+
+---
+
+## Related Resources
+
+- [GitHub Releases](https://github.com/SlasshyOverhere/BlankDrive/releases) - Download previous versions
+- [Troubleshooting](/troubleshooting) - Common issues and solutions
+- [FAQ](/faq) - Frequently asked questions

@@ -1,0 +1,135 @@
+---
+title: "version"
+description: "Display the BlankDrive version number"
+icon: "code-branch"
+---
+
+## Overview
+
+The `version` command displays the current version of BlankDrive installed on your system. This is useful for verifying your installation and checking if updates are available.
+
+## Usage
+
+```bash
+BLANK version
+```
+
+## Examples
+
+### Display Version
+
+```bash
+BLANK version
+```
+
+```
+  BlankDrive v0.1.2
+```
+
+### Check Before Updating
+
+Before installing updates, verify your current version:
+
+```bash
+BLANK version
+```
+
+Then check for updates:
+
+```bash
+BLANK update --check
+```
+
+## Version Information
+
+The version number follows [Semantic Versioning](https://semver.org/) format: `MAJOR.MINOR.PATCH`
+
+- **MAJOR**: Breaking changes or major feature releases
+- **MINOR**: New features and enhancements (backward compatible)
+- **PATCH**: Bug fixes and minor improvements
+
+## Alternative Methods
+
+You can also view the version using the `--version` flag:
+
+```bash
+BLANK --version
+blankdrive --version
+```
+
+Or using the `-V` flag:
+
+```bash
+BLANK -V
+blankdrive -V
+```
+
+## Use Cases
+
+### Verify Installation
+
+After installing BlankDrive, confirm it's properly installed:
+
+```bash
+npm install -g blankdrive
+BLANK version
+```
+
+### Bug Reporting
+
+When reporting issues, always include your BlankDrive version:
+
+```bash
+BLANK version
+# Copy output to include in bug report
+```
+
+### Update Verification
+
+After updating, verify the new version was installed:
+
+```bash
+BLANK update --install
+BLANK version
+```
+
+### Script Compatibility
+
+Check version in automation scripts:
+
+```bash
+#!/bin/bash
+VERSION=$(BLANK version | grep -oP 'v\K[0-9.]+')
+echo "Running BlankDrive version: $VERSION"
+
+# Ensure minimum version
+MIN_VERSION="0.1.2"
+if [[ "$VERSION" < "$MIN_VERSION" ]]; then
+  echo "Error: BlankDrive $MIN_VERSION or higher required"
+  exit 1
+fi
+```
+
+## Version History
+
+| Version | Release Date | Highlights |
+|---------|-------------|------------|
+| v0.1.2  | 2026-03-01  | Self-update flow, desktop app installer |
+| v0.1.1  | 2026-02-15  | Bug fixes, performance improvements |
+| v0.1.0  | 2026-02-01  | Initial public release |
+
+<Info>
+For detailed release notes, visit the [GitHub Releases](https://github.com/SlasshyOverhere/BlankDrive/releases) page.
+</Info>
+
+## Technical Details
+
+- Version is read from `package.json` at build time
+- Displayed version matches the npm package version
+- No network request is made (offline command)
+- Command runs instantly without vault access
+
+## Related Commands
+
+- [`update`](/commands/update) - Check for and install updates
+- [`status`](/commands/status) - View vault and sync status

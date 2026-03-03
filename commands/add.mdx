@@ -1,0 +1,126 @@
+---
+title: 'add'
+description: 'Add a new password entry to your vault'
+---
+
+## Usage
+
+```bash
+BLANK add
+```
+
+Add a new password entry to your encrypted vault. The command will interactively prompt you for entry details including title, username, password, URL, and notes.
+
+## Interactive Prompts
+
+When you run `BLANK add`, you'll be prompted for:
+
+- **Title** - A name for this entry (required)
+- **Username** - The username/email for this account
+- **Password** - The password to store (can be generated)
+- **URL** - The website URL associated with this entry
+- **Notes** - Additional notes or information
+
+## Behavior
+
+### Vault Unlocking
+
+If your vault is locked, you'll be prompted to enter your master password before adding the entry.
+
+<Note>
+The vault will be automatically unlocked during the add process if needed.
+</Note>
+
+### Entry Storage
+
+Once you provide all the details:
+
+1. The entry is encrypted using your vault's encryption key
+2. The encrypted data is saved locally to your vault
+3. An audit log event is recorded (`entry_created`)
+4. A unique entry ID is generated and displayed
+
+### Cloud Sync
+
+<Tip>
+After adding an entry, run `BLANK sync` to upload the changes to Google Drive.
+</Tip>
+
+The entry is initially saved locally only. You need to manually sync to backup to the cloud:
+
+```bash
+BLANK sync
+```
+
+## Example Session
+
+```bash
+$ BLANK add
+
+  Add New Entry
+
+✓ Vault unlocked
+
+  Title: GitHub
+  Username: myusername@email.com
+  Password: (generated or manual)
+  URL: https://github.com
+  Notes: Work account
+
+✓ Entry added
+
+  Entry "GitHub" saved successfully!
+  ID: abc123xyz
+
+  Note: Run "BLANK sync" to upload to Google Drive.
+```
+
+## Security Features
+
+### Encryption
+
+All entry data is encrypted before being written to disk:
+- Title, username, password, URL, and notes are all encrypted
+- Encryption uses the master key derived from your password
+- No plaintext data is ever stored on disk
+
+### Duress Mode
+
+<Note>
+If duress mode is active, the add command will appear to work normally but won't actually save any data.
+</Note>
+
+In duress mode:
+- The command shows normal prompts and progress
+- A fake "decoy" entry ID is displayed
+- No actual data is written to the vault
+- This protects your real vault contents under coercion
+
+## Audit Logging
+
+The following audit event is logged when you add an entry:
+
+- **Event Type**: `entry_created`
+- **Logged Data**: Entry ID and title
+- **Timestamp**: Automatically recorded
+
+View audit logs with `BLANK audit`.
+
+## Related Commands
+
+- [`get`](/commands/get) - Retrieve entries from the vault
+- [`list`](/commands/list) - View all entries
+- [`edit`](/commands/edit) - Modify existing entries
+- [`delete`](/commands/delete) - Remove entries
+
+## Prerequisites
+
+Before using `add`, ensure:
+
+1. Vault is initialized with `BLANK init`
+2. You know your master password
+
+```bash
+# Initialize vault first if needed
+BLANK init
+```

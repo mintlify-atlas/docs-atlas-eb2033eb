@@ -1,0 +1,474 @@
+---
+title: 'Key Derivation'
+description: 'Argon2id password hashing and HKDF sub-key derivation implementation'
+---
+
+## Overview
+
+BlankDrive uses a two-stage key derivation system:
+
+1. **Argon2id** derives a master key from your password
+2. **HKDF-SHA256** derives specialized sub-keys from the master key
+
+All key derivation happens client-side on your device.
+
+## Master Key Derivation
+
+### Argon2id Algorithm
+
+BlankDrive uses **Argon2id**, the winner of the Password Hashing Competition (PHC), for password-based key derivation.
+
+```typescript
+export async function deriveKey(
+  password: string,
+  salt: Buffer,
+  params: KdfParams = DEFAULT_KDF_PARAMS
+): Promise<Buffer> {
+  const hash = await argon2.hash(password, {
+    type: argon2.argon2id,
+    salt,
+    timeCost: params.timeCost,
+    memoryCost: params.memoryCost,
+    parallelism: params.parallelism,
+    hashLength: params.hashLength,
+    raw: true,
+  });
+
+  return hash;
+}
+```
+
+Source: [kdf.ts:11-27](~/workspace/source/src/crypto/kdf.ts:11-27)
+
+<Info>
+**Argon2id** is a hybrid version of Argon2 that combines:
+- Argon2i's resistance to side-channel attacks
+- Argon2d's resistance to GPU cracking
+</Info>
+
+### Default Parameters
+
+BlankDrive uses these Argon2id parameters:
+
+```typescript
+export const DEFAULT_KDF_PARAMS: KdfParams = {
+  timeCost: 3,
+  memoryCost: 65536,    // 64 MB
+  parallelism: 4,
+  hashLength: 32,       // 256 bits
+};
+```
+
+Source: [types/index.ts:27-32](~/workspace/source/src/types/index.ts:27-32)
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| **timeCost** | 3 | Number of iterations (passes over memory) |
+| **memoryCost** | 65536 | Memory usage in KiB (64 MB) |
+| **parallelism** | 4 | Degree of parallelism (threads) |
+| **hashLength** | 32 | Output hash length in bytes (256 bits) |
+
+### Parameter Security Analysis
+
+<Accordion title="Time Cost (Iterations)">
+**Value: 3 iterations**
+
+- Balances security with user experience
+- Each iteration passes through the entire memory buffer
+- Higher values increase computational cost for attackers
+- Typical range: 2-10 for interactive applications
+
+**Trade-off**: More iterations = slower unlocking but stronger resistance to brute-force attacks
+</Accordion>
+
+<Accordion title="Memory Cost (RAM Usage)">
+**Value: 64 MB (65536 KiB)**
+
+- Memory-hard function forces attackers to use significant RAM
+- Prevents efficient GPU and ASIC cracking
+- 64 MB is reasonable for most devices while providing strong security
+- OWASP recommends minimum 47 MB (48,000 KiB)
+
+**Trade-off**: More memory = better protection against parallel cracking but may not work on low-memory devices
+</Accordion>
+
+<Accordion title="Parallelism (Threads)">
+**Value: 4 threads**
+
+- Uses multiple CPU cores for faster computation
+- Increases attacker's hardware requirements
+- Matches typical modern CPU core counts
+
+**Trade-off**: Higher parallelism uses more CPU but provides faster key derivation
+</Accordion>
+
+<Accordion title="Hash Length (Output Size)">
+**Value: 32 bytes (256 bits)**
+
+- Matches AES-256 key size requirements
+- Provides 256-bit security level
+- Standard for modern cryptographic applications
+</Accordion>
+
+### Salt Generation
+
+Each vault uses a unique **32-byte random salt**:
+
+```typescript
+export function generateSalt(size: number = 32): Buffer {
+  return randomBytes(size);
+}
+```
+
+Source: [random.ts:13-15](~/workspace/source/src/crypto/random.ts:13-15)
+
+<Warning>
+**Salt uniqueness is critical**: Each vault must use a unique salt to prevent rainbow table attacks and ensure different vaults produce different keys even with the same password.
+</Warning>
+
+### Salt Storage
+
+The salt is stored in the vault index file:
+
+```typescript
+export interface VaultIndex {
+  version: string;
+  salt: string;  // Base64-encoded salt
+  entries: { /* ... */ };
+  metadata: { /* ... */ };
+}
+```
+
+Source: [types/index.ts:46-49](~/workspace/source/src/types/index.ts:46-49)
+
+<Info>
+The salt does not need to be secret - it's safe to store alongside encrypted data. Its purpose is to ensure uniqueness, not secrecy.
+</Info>
+
+## Sub-Key Derivation (HKDF)
+
+### Why Multiple Keys?
+
+BlankDrive derives separate encryption keys for different purposes:
+
+- **Key separation**: Compromise of one key doesn't affect others
+- **Context binding**: Each key is bound to a specific use case
+- **Cryptographic hygiene**: Never reuse the same key for different purposes
+
+### HKDF-SHA256 Implementation
+
+```typescript
+export function deriveSubKey(
+  masterKey: Buffer,
+  context: string,
+  length: number = 32
+): Buffer {
+  const derived = crypto.hkdfSync(
+    'sha256',
+    masterKey,
+    Buffer.alloc(0), // No salt for HKDF (already salted in Argon2)
+    Buffer.from(context, 'utf-8'),
+    length
+  );
+  return Buffer.from(derived);
+}
+```
+
+Source: [kdf.ts:32-45](~/workspace/source/src/crypto/kdf.ts:32-45)
+
+<Note>
+**HKDF** (HMAC-based Key Derivation Function) is defined in RFC 5869. It's a standard, well-analyzed KDF suitable for deriving multiple keys from a single master key.
+</Note>
+
+### Key Hierarchy
+
+BlankDrive derives these specialized sub-keys:
+
+```typescript
+export async function deriveAllKeys(
+  password: string,
+  salt?: Buffer
+): Promise<{ keys: DerivedKeys; salt: Buffer }> {
+  const actualSalt = salt || generateSalt(32);
+
+  const masterKey = await deriveKey(password, actualSalt);
+
+  const keys: DerivedKeys = {
+    masterKey,
+    indexKey: deriveSubKey(masterKey, 'slasshy-index-key'),
+    entryKey: deriveSubKey(masterKey, 'slasshy-entry-key'),
+    metadataKey: deriveSubKey(masterKey, 'slasshy-metadata-key'),
+  };
+
+  return { keys, salt: actualSalt };
+}
+```
+
+Source: [kdf.ts:50-66](~/workspace/source/src/crypto/kdf.ts:50-66)
+
+### Key Purpose Table
+
+| Key Name | Context String | Purpose |
+|----------|---------------|----------|
+| **masterKey** | *(from Argon2id)* | Root key, never used directly for encryption |
+| **indexKey** | `slasshy-index-key` | Encrypts vault index metadata |
+| **entryKey** | `slasshy-entry-key` | Encrypts individual vault entries |
+| **metadataKey** | `slasshy-metadata-key` | Encrypts vault metadata and settings |
+
+<Info>
+Context strings are hardcoded application-specific identifiers that ensure keys derived for different purposes are cryptographically independent.
+</Info>
+
+### Context String Security
+
+<Accordion title="Why Context Strings Matter">
+Context strings in HKDF serve multiple security purposes:
+
+1. **Domain Separation**: Ensures keys for different purposes are cryptographically independent
+2. **Prevents Misuse**: A key meant for index encryption cannot be used for entry encryption
+3. **Application Binding**: Using `slasshy-*` prefix binds keys to BlankDrive specifically
+4. **Future-Proofing**: New key types can be added without affecting existing keys
+
+Example attack prevented:
+```typescript
+// WITHOUT context strings:
+indexKey = HKDF(masterKey, "key");
+entryKey = HKDF(masterKey, "key");  // Same as indexKey!
+
+// WITH context strings:
+indexKey = HKDF(masterKey, "slasshy-index-key");
+entryKey = HKDF(masterKey, "slasshy-entry-key");  // Different!
+```
+</Accordion>
+
+## Password Verification
+
+### Secure Verification Process
+
+BlankDrive doesn't store passwords. Instead, it stores a hash of the master key:
+
+```typescript
+export async function verifyPassword(
+  password: string,
+  salt: Buffer,
+  expectedKeyHash: Buffer
+): Promise<boolean> {
+  const masterKey = await deriveKey(password, salt);
+  const keyHash = crypto.createHash('sha256').update(masterKey).digest();
+
+  const isValid = crypto.timingSafeEqual(keyHash, expectedKeyHash);
+
+  wipeBuffer(masterKey);  // Securely erase from memory
+
+  return isValid;
+}
+```
+
+Source: [kdf.ts:71-84](~/workspace/source/src/crypto/kdf.ts:71-84)
+
+### Timing-Safe Comparison
+
+<Warning>
+**Why `timingSafeEqual`?**
+
+Standard comparison (`===`) exits early on the first mismatch, leaking information through timing:
+
+```typescript
+// VULNERABLE (timing attack):
+if (keyHash.toString('hex') === expectedHash) { /* ... */ }
+
+// SECURE (constant-time):
+if (crypto.timingSafeEqual(keyHash, expectedHash)) { /* ... */ }
+```
+
+Timing attacks allow attackers to guess passwords byte-by-byte by measuring comparison time.
+</Warning>
+
+### Key Hash Storage
+
+The master key hash is computed as:
+
+```typescript
+export function hashKey(key: Buffer): Buffer {
+  return crypto.createHash('sha256').update(key).digest();
+}
+```
+
+Source: [kdf.ts:89-91](~/workspace/source/src/crypto/kdf.ts:89-91)
+
+<Info>
+Storing SHA-256(masterKey) instead of the master key itself provides an extra layer of security: even if the hash is stolen, it cannot be reversed to obtain the master key.
+</Info>
+
+## Memory Security
+
+### Secure Buffer Wiping
+
+Sensitive key material is wiped from memory after use:
+
+```typescript
+export function wipeBuffer(buffer: Buffer): void {
+  if (!buffer || buffer.length === 0) return;
+
+  // Overwrite with random data
+  crypto.randomFillSync(buffer);
+  // Overwrite with zeros
+  buffer.fill(0);
+
+  SECURE_BUFFERS.delete(buffer);
+}
+```
+
+Source: [memoryGuard.ts:17-26](~/workspace/source/src/crypto/memoryGuard.ts:17-26)
+
+<Accordion title="Why Two-Pass Wiping?">
+BlankDrive uses a two-pass wiping strategy:
+
+1. **Random fill**: Overwrites with random data to prevent cold boot attacks
+2. **Zero fill**: Ensures predictable state and may help with memory compression
+
+While JavaScript/V8 may optimize away these writes in some cases, this provides best-effort memory sanitization.
+</Accordion>
+
+### Auto-Expiring Key Holder
+
+Keys are held in memory with automatic expiration:
+
+```typescript
+export class SecureKeyHolder {
+  private key: Buffer | null = null;
+  private timeoutId: NodeJS.Timeout | null = null;
+  private readonly timeoutMs: number;
+
+  constructor(timeoutMs: number = 300000) { // 5 minutes default
+    this.timeoutMs = timeoutMs;
+  }
+
+  setKey(key: Buffer): void {
+    this.clear();
+    this.key = Buffer.from(key);
+    SECURE_BUFFERS.add(this.key);
+    this.resetTimeout();
+  }
+
+  // ... auto-wipe after timeout ...
+}
+```
+
+Source: [memoryGuard.ts:51-65](~/workspace/source/src/crypto/memoryGuard.ts:51-65)
+
+<Info>
+By default, keys are wiped from memory after **5 minutes of inactivity**. This balances usability with security.
+</Info>
+
+## Performance Considerations
+
+### Derivation Time
+
+With default parameters on a modern CPU:
+- **Initial derivation**: ~200-500ms
+- **Verification**: ~200-500ms (must re-derive to verify)
+
+<Note>
+This deliberate slowness is a security feature: it makes brute-force attacks 200-500ms per password attempt instead of microseconds.
+</Note>
+
+### Scaling Considerations
+
+<Accordion title="Increasing Security for High-Value Vaults">
+For vaults requiring stronger protection:
+
+```typescript
+const HIGH_SECURITY_PARAMS: KdfParams = {
+  timeCost: 5,          // More iterations
+  memoryCost: 131072,   // 128 MB memory
+  parallelism: 4,
+  hashLength: 32,
+};
+```
+
+Trade-offs:
+- ✅ Significantly slower brute-force attacks
+- ✅ Better protection against GPU/ASIC cracking
+- ❌ Slower unlocking (500ms → 1-2 seconds)
+- ❌ Higher memory usage may not work on all devices
+</Accordion>
+
+### Why Not Bcrypt or PBKDF2?
+
+| Algorithm | Issue |
+|-----------|-------|
+| **bcrypt** | Only uses ~4 KB memory, vulnerable to GPU cracking |
+| **PBKDF2** | Not memory-hard, fast on GPUs and ASICs |
+| **scrypt** | Memory-hard but not GPU-resistant |
+| **Argon2id** | ✅ Memory-hard, GPU-resistant, and side-channel resistant |
+
+## Attack Resistance
+
+### Brute-Force Attacks
+
+**Protection**: Memory-hard Argon2id with 64 MB memory cost
+
+Attacker requirements per guess:
+- 64 MB RAM minimum
+- ~200-500ms computation time
+- Cannot be parallelized efficiently on GPUs
+
+**Example**: Testing 1 billion passwords:
+- With Argon2id: ~6,000 years on a single CPU
+- With PBKDF2: ~1 week on a GPU cluster
+
+### Rainbow Table Attacks
+
+**Protection**: Unique 32-byte random salt per vault
+
+Attacker would need to:
+- Generate separate rainbow tables for each salt
+- Each table requires terabytes of storage
+- Completely impractical for unique salts
+
+<Info>
+Even if two users choose the same password, unique salts ensure completely different master keys.
+</Info>
+
+### Side-Channel Attacks
+
+**Protection**: Argon2id's hybrid approach
+
+- Argon2i component resists timing attacks
+- Argon2d component resists tradeoff attacks
+- Constant-time comparisons for verification
+
+<Warning>
+Side-channel protection is limited to the KDF itself. Application-level timing leaks, memory dumps, and keystroke logging are separate concerns (see [Trust Model](/security/trust-model)).
+</Warning>
+
+## Best Practices
+
+### Do's
+
+- ✅ Use strong master passwords (12+ characters, mixed character types)
+- ✅ Keep unique salts for each vault
+- ✅ Use separate sub-keys for different purposes
+- ✅ Wipe keys from memory after use
+- ✅ Let Argon2id do its job (don't reduce parameters for speed)
+
+### Don'ts
+
+- ❌ Don't reuse passwords across vaults
+- ❌ Don't reduce Argon2id parameters below defaults
+- ❌ Don't store master password anywhere
+- ❌ Don't use the master key directly for encryption
+- ❌ Don't reuse sub-keys for different purposes
+
+## References
+
+- [Argon2 Specification (RFC 9106)](https://datatracker.ietf.org/doc/html/rfc9106)
+- [HKDF Specification (RFC 5869)](https://datatracker.ietf.org/doc/html/rfc5869)
+- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [Password Hashing Competition](https://www.password-hashing.net/)
+
+## Related Topics
+
+- [Encryption](/security/encryption) - How derived keys are used for AES-256-GCM encryption
+- [Trust Model](/security/trust-model) - Understanding what key derivation can and cannot protect against

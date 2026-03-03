@@ -1,0 +1,229 @@
+---
+title: 'get'
+description: 'Retrieve and view password entries from your vault'
+---
+
+## Usage
+
+```bash
+BLANK get [search] [options]
+```
+
+Retrieve a password entry from your vault. Supports fuzzy search to quickly find entries by title, username, or other fields.
+
+## Arguments
+
+<ParamField path="search" type="string" optional>
+  Search term to find entries. Supports fuzzy matching on title, username, URL, and category.
+  
+  If omitted, you can interactively search or browse entries.
+</ParamField>
+
+## Options
+
+<ParamField path="--copy" type="boolean" default="false">
+  Copy the password to clipboard automatically. The clipboard is cleared after 30 seconds for security.
+  
+  **Alias:** `-c`
+</ParamField>
+
+<ParamField path="--show-password" type="boolean" default="false">
+  Display the password in plaintext in the terminal. By default, passwords are masked.
+  
+  **Alias:** `-s`
+</ParamField>
+
+## Examples
+
+### Basic Retrieval
+
+```bash
+# Search for entries matching "github"
+BLANK get github
+```
+
+### Copy Password to Clipboard
+
+```bash
+# Find entry and copy password (cleared after 30s)
+BLANK get github --copy
+BLANK get github -c
+```
+
+### Show Password in Terminal
+
+```bash
+# Display the password in plaintext
+BLANK get github --show-password
+BLANK get github -s
+```
+
+### Combined Options
+
+```bash
+# Show password AND copy to clipboard
+BLANK get github -s -c
+```
+
+## Fuzzy Search
+
+The get command uses intelligent fuzzy search to find entries even with typos or partial matches:
+
+<CodeGroup>
+```bash Search by title
+# Finds "GitHub Account"
+BLANK get github
+BLANK get hub
+BLANK get gh
+```
+
+```bash Search by username
+# Finds entries with matching username
+BLANK get myemail@gmail.com
+```
+
+```bash Search by URL
+# Finds entries with matching URL
+BLANK get github.com
+```
+</CodeGroup>
+
+### Multiple Matches
+
+If multiple entries match your search, you'll be presented with an interactive list:
+
+```bash
+$ BLANK get git
+
+  Found 3 entries:
+
+  ★★★ GitHub - myuser@email.com (2024-01-15)
+  ★★☆ GitLab - admin@company.com (2024-01-10)
+  ★☆☆ Bitbucket - dev@team.com (2023-12-20)
+
+? Select entry: (Use arrow keys)
+```
+
+The match quality is shown with stars:
+- ★★★ Excellent match
+- ★★☆ Strong match
+- ★☆☆ Good match
+
+<Tip>
+Only the top 10 results are shown. Use more specific search terms to narrow results.
+</Tip>
+
+## Entry Display
+
+When an entry is retrieved, you'll see:
+
+```bash
+  GitHub Account
+  ────────────────────────────────────────
+  Username: myusername@email.com
+  Password: ************ (use --show-password to reveal)
+  URL: https://github.com
+  Notes:
+    Work account
+    2FA enabled
+  ────────────────────────────────────────
+  Created: 1/15/2024, 9:30:00 AM
+  Modified: 2/20/2024, 3:45:00 PM
+  Password changed: 2/20/2024, 3:45:00 PM
+```
+
+### Password Security Warnings
+
+If a password is expired or weak, warnings are displayed:
+
+```bash
+  Password: ************ (use --show-password to reveal)
+  ⚠️  Password is 180 days old (expires in 30 days)
+```
+
+<Note>
+Password expiry warnings are based on the password age policy configured in your vault settings.
+</Note>
+
+## Clipboard Security
+
+When using `--copy`:
+
+1. Password is copied to your system clipboard
+2. A confirmation message is displayed
+3. After 30 seconds, the clipboard is automatically cleared
+4. Only cleared if the clipboard still contains the password
+
+```bash
+✓ Password copied to clipboard!
+  (Will be cleared in 30 seconds)
+```
+
+<Tip>
+The auto-clear only happens if you haven't copied something else in the meantime.
+</Tip>
+
+## Security Features
+
+### Audit Logging
+
+Every get operation is logged:
+
+- **Event**: `entry_accessed` - Entry was viewed
+- **Event**: `password_viewed` - Password was revealed with `--show-password`
+- **Event**: `password_copied` - Password was copied with `--copy`
+
+View logs with:
+
+```bash
+BLANK audit
+```
+
+### Vault Unlocking
+
+If your vault is locked, you'll be prompted for your master password:
+
+```bash
+$ BLANK get github
+? Enter master password: ********
+✓ Vault unlocked
+```
+
+### Duress Mode Protection
+
+<Note>
+If duress mode is active, fake decoy entries are shown instead of real vault contents.
+</Note>
+
+## Error Handling
+
+### No Matches Found
+
+```bash
+$ BLANK get nonexistent
+
+  No entries found matching "nonexistent".
+```
+
+### Vault Not Initialized
+
+```bash
+$ BLANK get github
+
+  No vault found. Run "BLANK init" first.
+```
+
+### Incorrect Password
+
+```bash
+✗ Failed to unlock vault
+  Invalid password or corrupted vault
+```
+
+## Related Commands
+
+- [`add`](/commands/add) - Add new entries
+- [`list`](/commands/list) - View all entries
+- [`edit`](/commands/edit) - Modify entries
+- [`delete`](/commands/delete) - Remove entries
+- [`audit`](/commands/audit) - View access logs

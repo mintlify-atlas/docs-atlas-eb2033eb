@@ -1,0 +1,600 @@
+---
+title: 'Trust Model'
+description: 'Security guarantees, threat model, and trust boundaries of BlankDrive'
+---
+
+## Architecture Overview
+
+BlankDrive is a **fully client-side, zero-knowledge vault** with no backend server operated by the project.
+
+```
+┌─────────────────────────────────────────────────┐
+│           Your Device (Client)                  │
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │  BlankDrive Application                  │  │
+│  │  - Password input                        │  │
+│  │  - Key derivation (Argon2id)            │  │
+│  │  - Encryption (AES-256-GCM)             │  │
+│  │  - Vault management                      │  │
+│  └──────────────────────────────────────────┘  │
+│                    │                            │
+│                    ↓ Encrypted blobs            │
+└────────────────────┼────────────────────────────┘
+                     │
+                     ↓ Direct OAuth + API calls
+         ┌───────────────────────┐
+         │   Google Drive API    │
+         │   (Your Account)      │
+         └───────────────────────┘
+```
+
+Source: [README.md:28-36](~/workspace/source/README.md:28-36)
+
+<Info>
+**Zero-Knowledge Architecture**: BlankDrive never sends your master password or encryption keys to any server. All cryptographic operations happen on your device.
+</Info>
+
+## What BlankDrive Guarantees
+
+### Client-Side Processing
+
+**Guaranteed**: All sensitive operations happen locally on your device
+
+```typescript
+// Master key derivation - CLIENT SIDE
+const masterKey = await deriveKey(password, salt);
+
+// Sub-key derivation - CLIENT SIDE  
+const entryKey = deriveSubKey(masterKey, 'slasshy-entry-key');
+
+// Encryption - CLIENT SIDE
+const encrypted = encrypt(plaintext, entryKey, aad);
+
+// Upload encrypted blob - ONLY encrypted data leaves device
+await uploadToGoogleDrive(encrypted);
+```
+
+Source: [kdf.ts:50-66](~/workspace/source/src/crypto/kdf.ts:50-66), [encryption.ts:13-36](~/workspace/source/src/crypto/encryption.ts:13-36)
+
+<Note>
+Your plaintext data never leaves your device. Only encrypted blobs are uploaded to Google Drive.
+</Note>
+
+### No Backend Server
+
+**Guaranteed**: BlankDrive has no project-operated authentication or storage backend
+
+- No remote token broker
+- No credential server
+- No sync server
+- No telemetry endpoint
+
+Source: [README.md:30-34](~/workspace/source/README.md:30-34)
+
+<Info>
+You communicate directly with Google's OAuth and Drive APIs. BlankDrive's developers never see your data, credentials, or tokens.
+</Info>
+
+### Encryption Standards
+
+**Guaranteed**: Industry-standard, well-audited cryptographic algorithms
+
+| Component | Algorithm | Standard |
+|-----------|-----------|----------|
+| **Encryption** | AES-256-GCM | NIST FIPS 197 + SP 800-38D |
+| **Key Derivation** | Argon2id | RFC 9106 (PHC winner) |
+| **Sub-key Derivation** | HKDF-SHA256 | RFC 5869 |
+| **Random Generation** | `crypto.randomBytes()` | OS CSPRNG |
+
+Source: [README.md:40-42](~/workspace/source/README.md:40-42)
+
+### Direct OAuth Flow
+
+**Guaranteed**: OAuth runs locally between your device and Google
+
+```
+Your Device (127.0.0.1:random_port)
+      │
+      ├─→ 1. Start local callback server
+      │
+      ├─→ 2. Open Google consent URL with PKCE
+      │
+      ←─┤ 3. Google redirects to 127.0.0.1 with auth code
+      │
+      ├─→ 4. Exchange code for tokens (direct to Google)
+      │
+      └─→ 5. Store encrypted tokens locally
+```
+
+Source: [README.md:181-188](~/workspace/source/README.md:181-188)
+
+<Info>
+**Loopback OAuth**: The callback server runs on `127.0.0.1` (localhost). Your tokens never transit through any third-party server.
+</Info>
+
+### Encrypted Credential Storage
+
+**Guaranteed**: OAuth credentials and tokens are encrypted at rest
+
+```bash
+~/.slasshy/
+├── vault.enc                           # Encrypted vault index
+├── drive_token.enc                     # Encrypted OAuth tokens
+├── google_oauth_credentials.enc        # Encrypted client ID/secret
+└── cloud_storage_config.json           # Storage preferences (not sensitive)
+```
+
+Source: [README.md:392-396](~/workspace/source/README.md:392-396)
+
+<Warning>
+While credentials are encrypted at rest, they are decrypted in memory when used. If your device is compromised while the vault is unlocked, credentials can be extracted.
+</Warning>
+
+## What BlankDrive Does NOT Guarantee
+
+### Compromised Device Security
+
+**Not Protected**: If your device is compromised while vault is unlocked
+
+<Accordion title="Malware on Unlocked Device">
+**Threat**: Active malware running with user privileges
+
+**What can be stolen**:
+- Master password (keylogger)
+- Decrypted vault entries in memory
+- Encryption keys from memory
+- OAuth tokens
+- Plaintext files during upload/download
+
+**Why BlankDrive can't prevent this**:
+```
+User types password → Malware captures keystrokes
+Vault unlocks → Malware dumps process memory
+File decrypted → Malware reads decrypted data
+```
+
+**Mitigation**:
+- Keep OS and antivirus updated
+- Don't install untrusted software
+- Use vault lock when stepping away
+- Enable auto-lock timeout (default: 5 minutes)
+</Accordion>
+
+<Accordion title="Memory Extraction Attacks">
+**Threat**: Cold boot attacks, memory forensics, swap file analysis
+
+**What can be exposed**:
+- Encryption keys (while vault is unlocked)
+- Recently decrypted data
+- Master key (briefly in memory during unlock)
+
+**Why BlankDrive's memory wiping is limited**:
+```typescript
+// BlankDrive wipes buffers:
+wipeBuffer(masterKey);  
+
+// But JavaScript/V8 may:
+// - Keep copies in V8 heap
+// - Persist in swap/page files  
+// - Leave traces in CPU cache
+// - Get copied during GC
+```
+
+Source: [memoryGuard.ts:17-26](~/workspace/source/src/crypto/memoryGuard.ts:17-26)
+
+**Mitigation**:
+- Lock vault when not in use
+- Enable full-disk encryption
+- Disable swap/hibernation for maximum security
+- Use encrypted RAM (if available)
+</Accordion>
+
+Source: [README.md:355-358](~/workspace/source/README.md:355-358)
+
+### Password Loss Recovery
+
+**Not Protected**: Lost master password = permanently lost data
+
+<Warning>
+**NO PASSWORD RECOVERY**: BlankDrive cannot reset your password because:
+
+1. Master password is never stored (not even hashed)
+2. Only a hash of the derived key is stored
+3. Encryption keys are derived from password + salt
+4. Without the password, keys cannot be derived
+5. Without keys, encrypted data cannot be decrypted
+
+**This is by design** - it's the core of zero-knowledge security.
+</Warning>
+
+<Info>
+**Best practice**: Write your master password on paper and store it in a secure physical location (safe, safety deposit box) as a backup.
+</Info>
+
+### Google Drive Security
+
+**Not Protected**: Trust Google Drive for availability and access control
+
+<Accordion title="What Google Can Do">
+**Google can**:
+- Delete your files (account termination, TOS violation)
+- Revoke API access
+- Throttle or rate-limit requests
+- Experience service outages
+- Comply with legal data requests
+
+**Google cannot** (due to encryption):
+- Read your vault contents
+- Decrypt your passwords or files
+- Recover data if you lose master password
+- Provide plaintext to third parties
+</Accordion>
+
+<Accordion title="Drive Metadata Exposure">
+**Not encrypted** (visible to Google):
+- File sizes
+- Upload/download timestamps  
+- Access patterns
+- Folder structure (public mode)
+- Number of files
+- Your Google account identity
+
+**Encrypted** (not visible to Google):
+- File contents
+- File names
+- Passwords and notes
+- Entry metadata
+- Chunk data
+</Accordion>
+
+Source: [README.md:327-335](~/workspace/source/README.md:327-335)
+
+### Metadata Leakage
+
+**Not Protected**: File sizes, access patterns, and timing information
+
+```
+Google Drive can observe:
+- Vault index file size → Approximate number of entries
+- Upload frequency → When you add new data  
+- Chunk sizes → Original file size (before encryption)
+- Access timestamps → When you use BlankDrive
+```
+
+<Note>
+Encryption protects confidentiality (content), but not metadata (size/timing). This is a fundamental limitation of encrypted cloud storage.
+</Note>
+
+### Side-Channel Attacks
+
+**Not Protected**: Advanced physical and timing attacks
+
+<Accordion title="Timing Attacks on Application Logic">
+While cryptographic primitives use constant-time operations, application logic may leak timing information:
+
+```typescript
+// Constant-time comparison (secure):
+crypto.timingSafeEqual(keyHash, expectedHash);
+
+// But other operations may leak timing:
+if (entryList.length > 1000) { /* slow path */ }
+if (password.length < 8) { return "too short"; }  // Leaks length
+```
+
+**Mitigation**: BlankDrive uses constant-time comparisons for cryptographic operations, but perfect timing resistance in application logic is not guaranteed.
+</Accordion>
+
+<Accordion title="Cache and Speculative Execution Attacks">
+**Threats**: Spectre, Meltdown, cache timing attacks
+
+**Reality**: These attacks target CPU microarchitecture and are generally outside the scope of application-level security.
+
+**Mitigation**: 
+- Keep OS and browser updated with CPU microcode patches
+- Use hardware with architectural protections
+- Understand these are not specific to BlankDrive
+</Accordion>
+
+### Network Attacks
+
+**Not Protected**: Network-level monitoring and traffic analysis
+
+<Accordion title="TLS/HTTPS Trust">
+BlankDrive relies on HTTPS for communication with Google APIs:
+
+```
+BlankDrive → [TLS] → Google Drive API
+```
+
+**You must trust**:
+- Your OS's root certificate store
+- Certificate authorities (CAs)
+- TLS implementation (Node.js/OpenSSL)
+
+**Threats**:
+- Compromised CA issuing fraudulent certificates
+- Nation-state TLS interception
+- Man-in-the-middle with custom root CA
+
+**Mitigation**: Even if TLS is compromised, attackers only see encrypted blobs (not plaintext).
+</Accordion>
+
+<Accordion title="Traffic Analysis">
+**What attackers observing your network can learn**:
+- You're communicating with Google Drive
+- Upload/download volume
+- Access frequency
+- Approximate data sizes
+
+**What they cannot learn** (due to encryption):
+- Vault contents
+- What you're uploading/downloading
+- Entry titles or metadata
+</Accordion>
+
+## Storage Modes and Privacy
+
+### Public Mode
+
+**Path**: `Google Drive > BlankDrive/<folder>/`
+
+**Visibility**:
+- ✅ You can see files in Drive UI
+- ✅ Easier to verify backups exist
+- ✅ Can manually delete files via Drive UI
+
+**Trade-offs**:
+- ⚠️ Folder name visible (`BlankDrive`)
+- ⚠️ File count and sizes visible
+- ⚠️ More obvious you're using a security tool
+
+Source: [README.md:193-199](~/workspace/source/README.md:193-199)
+
+### Hidden Mode
+
+**Path**: Google `appDataFolder` (invisible in Drive UI)
+
+**Visibility**:
+- ✅ Files not visible in Drive UI
+- ✅ Less obvious metadata
+- ✅ Better privacy against casual Drive browsing
+
+**Trade-offs**:
+- ⚠️ Cannot verify backups visually
+- ⚠️ Harder to manually manage files
+- ⚠️ Still visible to Google (just not to you in UI)
+
+Source: [README.md:193-199](~/workspace/source/README.md:193-199)
+
+<Warning>
+**Hidden mode is NOT a security feature**: Files are still visible to Google, law enforcement (with warrant), or anyone with your Google account credentials. It only provides "security through obscurity" in your Drive UI.
+</Warning>
+
+## Threat Model Summary
+
+### Threats BlankDrive Protects Against
+
+| Threat | Protection |
+|--------|------------|
+| **Google reading your data** | ✅ End-to-end encryption |
+| **Accidental Drive exposure** | ✅ All data encrypted at rest |
+| **Stolen encrypted backup** | ✅ Strong password required to decrypt |
+| **Man-in-the-middle on network** | ✅ Encrypted payloads + TLS |
+| **Rainbow table attacks** | ✅ Unique salts per vault |
+| **GPU/ASIC password cracking** | ✅ Memory-hard Argon2id |
+| **Data tampering** | ✅ Authenticated encryption (GCM) |
+| **Stolen encrypted files** | ✅ AES-256-GCM encryption |
+
+### Threats BlankDrive DOES NOT Protect Against
+
+| Threat | Why Not Protected |
+|--------|-------------------|
+| **Malware on unlocked device** | ❌ Can capture keys from memory |
+| **Keylogger during password entry** | ❌ Plaintext password in memory |
+| **Physical device theft (unlocked)** | ❌ Keys in memory, vault unlocked |
+| **Forgotten master password** | ❌ No recovery mechanism (by design) |
+| **Compromised Google account** | ❌ Attacker can delete (but not decrypt) |
+| **Coerced password disclosure** | ❌ Cannot prove vault doesn't exist |
+| **Nation-state endpoint compromise** | ❌ All local security bypassed |
+| **Metadata analysis** | ❌ File sizes, timing not encrypted |
+
+## Security Hardening Recommendations
+
+### Device Security
+
+<Accordion title="Essential Protections">
+**Operating System**:
+- ✅ Enable full-disk encryption (BitLocker, FileVault, LUKS)
+- ✅ Keep OS and security patches up to date
+- ✅ Use a strong device password/PIN
+- ✅ Enable automatic security updates
+
+**Application Security**:
+- ✅ Download BlankDrive only from official sources
+- ✅ Verify npm package integrity
+- ✅ Run antivirus/anti-malware software
+- ✅ Don't install untrusted software
+
+**Lock Settings**:
+```bash
+BLANK settings --autolock 5  # Lock after 5 minutes
+BLANK lock                   # Lock immediately
+```
+</Accordion>
+
+### Password Security
+
+<Accordion title="Master Password Best Practices">
+**Strength Requirements**:
+- Minimum 12 characters (20+ recommended)
+- Mix uppercase, lowercase, numbers, symbols
+- Avoid dictionary words and personal information
+- Don't reuse passwords from other services
+
+**Password Generation**:
+```bash
+BLANK generate --length 20 --symbols
+```
+
+**Password Storage**:
+- Write it down and store physically (safe/deposit box)
+- Don't store in browser password manager
+- Don't store in cloud notes/documents
+- Consider a password manager for non-master passwords
+</Accordion>
+
+### Network Security
+
+<Accordion title="Network Protections">
+**Trusted Networks Only**:
+- ✅ Use home or trusted corporate networks
+- ⚠️ Avoid public WiFi for vault operations
+- ✅ Use VPN when on untrusted networks
+- ✅ Verify HTTPS connections
+
+**OAuth Security**:
+- ✅ Review Google account security settings
+- ✅ Enable 2FA on Google account
+- ✅ Monitor authorized apps regularly
+- ✅ Rotate OAuth credentials periodically
+</Accordion>
+
+### Backup Strategy
+
+<Accordion title="Secure Backup Practices">
+**What to Back Up**:
+```bash
+~/.slasshy/vault.enc                     # Essential
+~/.slasshy/drive_token.enc               # OAuth tokens
+~/.slasshy/google_oauth_credentials.enc  # OAuth creds
+```
+
+**Backup Storage**:
+- ✅ Encrypted external drive (offline)
+- ✅ Encrypted USB stick in safe location
+- ⚠️ Encrypted cloud backup (secondary service)
+- ❌ Don't store unencrypted backups
+
+**Master Password Backup**:
+- ✅ Write on paper, store in safe/deposit box
+- ✅ Consider splitting among trusted parties
+- ⚠️ Tell trusted person where to find it (in case of emergency)
+- ❌ Never store digitally alongside vault
+</Accordion>
+
+## Compliance and Legal Considerations
+
+### Data Residency
+
+<Info>
+Encrypted data is stored in Google Drive, which may store data across multiple jurisdictions. Check Google's data residency policies if regulatory compliance is required.
+</Info>
+
+### Encryption Export Controls
+
+<Note>
+BlankDrive uses strong encryption (AES-256) which may be subject to export controls in some jurisdictions. Users are responsible for compliance with local laws.
+</Note>
+
+### Legal Data Requests
+
+If Google receives a legal data request:
+- They can provide encrypted blobs
+- They cannot provide decryption keys (not available to Google)
+- They can provide metadata (file sizes, timestamps, access patterns)
+- You would need to provide master password to decrypt (subject to local laws on compelled disclosure)
+
+## Zero-Knowledge Architecture Verification
+
+### How to Verify BlankDrive's Claims
+
+<Accordion title="Code Audit">
+BlankDrive is open source. You can verify:
+
+```bash
+# Clone the repository
+git clone https://github.com/SlasshyOverhere/BlankDrive.git
+
+# Review cryptographic code
+cat src/crypto/encryption.ts
+cat src/crypto/kdf.ts
+
+# Check for network calls
+grep -r "https://" src/
+
+# Verify no backend server
+grep -r "api.*blankdrive" src/
+```
+
+Key files to review:
+- `src/crypto/encryption.ts` - Encryption implementation
+- `src/crypto/kdf.ts` - Key derivation
+- `src/services/drive.ts` - Google Drive interactions
+</Accordion>
+
+<Accordion title="Network Monitoring">
+Verify no data leaves your device unencrypted:
+
+```bash
+# Monitor network traffic (Linux)
+sudo tcpdump -i any -A | grep -i "password\|secret"
+
+# Monitor network traffic (macOS)  
+sudo tcpdump -i any -A | grep -i "password\|secret"
+
+# Monitor network traffic (Windows)
+# Use Wireshark or similar tool
+```
+
+You should only see:
+- HTTPS traffic to `*.googleapis.com`
+- No plaintext passwords or secrets
+- Only base64-encoded encrypted blobs in payloads
+</Accordion>
+
+<Accordion title="Local Storage Inspection">
+Verify local files are encrypted:
+
+```bash
+# View encrypted vault (should be gibberish)
+cat ~/.slasshy/vault.enc
+
+# View encrypted tokens (should be gibberish)
+cat ~/.slasshy/drive_token.enc  
+
+# Check for plaintext secrets (should find none)
+grep -r "password" ~/.slasshy/
+```
+</Accordion>
+
+## Trust Summary
+
+### What You Must Trust
+
+1. **Your device security**: OS, hardware, installed software
+2. **Cryptographic libraries**: Node.js crypto, Argon2, OpenSSL
+3. **BlankDrive implementation**: Code correctness and no backdoors (open source)
+4. **Google Drive**: Availability and access control (but not confidentiality)
+5. **Your master password**: Strength and secrecy
+6. **TLS/HTTPS**: Transport security to Google APIs
+
+### What You Do NOT Need to Trust
+
+1. **BlankDrive developers**: No backend servers, no access to your data
+2. **Google reading data**: All data encrypted before upload
+3. **Network eavesdroppers**: Only encrypted blobs transmitted
+4. **Stolen encrypted backups**: Strong password protects decryption
+5. **Other BlankDrive users**: Per-vault unique salts and keys
+
+## References
+
+- [Zero-Knowledge Architecture Best Practices](https://www.coursera.org/articles/zero-knowledge-proof)
+- [NIST Security Guidelines](https://csrc.nist.gov/)
+- [OWASP Cryptographic Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html)
+- [Google Drive API Security](https://developers.google.com/drive/api/guides/about-auth)
+
+## Related Topics
+
+- [Encryption](/security/encryption) - Technical details of AES-256-GCM implementation
+- [Key Derivation](/security/key-derivation) - How keys are derived from your password

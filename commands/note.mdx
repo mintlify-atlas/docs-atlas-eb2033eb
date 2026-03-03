@@ -1,0 +1,450 @@
+---
+title: "note"
+description: "Manage secure encrypted notes with add, view, edit, and list operations"
+icon: "note-sticky"
+---
+
+## Overview
+
+The `note` command provides a complete note-taking system with encryption. Notes are stored securely in your vault and can be edited with your system's default text editor.
+
+<Note>
+Notes are encrypted with AES-256-GCM and synced to the cloud just like other vault entries.
+</Note>
+
+## Usage
+
+```bash
+BLANK note [subcommand] [arg]
+```
+
+## Subcommands
+
+<ParamField path="add" type="subcommand">
+  Create a new secure note. Aliases: `new`, `create`
+</ParamField>
+
+<ParamField path="view" type="subcommand">
+  View an existing note. Aliases: `show`, `get`
+</ParamField>
+
+<ParamField path="edit" type="subcommand">
+  Edit an existing note's title or content.
+</ParamField>
+
+<ParamField path="list" type="subcommand">
+  List all notes in the vault. Alias: `ls`
+</ParamField>
+
+## Arguments
+
+<ParamField path="arg" type="string" optional>
+  Search term for `view` and `edit` subcommands. Searches note titles.
+</ParamField>
+
+## Subcommand: add
+
+Create a new encrypted note.
+
+### Usage
+
+```bash
+BLANK note add
+```
+
+Aliases: `note new`, `note create`
+
+### Examples
+
+```bash
+BLANK note add
+```
+
+```
+  📝 Add Secure Note
+
+  Note title: Meeting Notes
+
+  Opening editor for note content...
+  (Save and close the editor when done)
+
+  [Your default text editor opens]
+
+  Saving note...
+
+  📝 "Meeting Notes" saved successfully!
+  ID: note_abc123xyz
+  Length: 347 characters
+```
+
+<Tip>
+The command opens your system's default editor (Notepad on Windows, nano/vim on Linux, TextEdit on macOS). Save and close the editor to complete the note.
+</Tip>
+
+## Subcommand: view
+
+View the contents of a note.
+
+### Usage
+
+```bash
+BLANK note view [search]
+```
+
+Aliases: `note show`, `note get`
+
+### Arguments
+
+<ParamField path="search" type="string" optional>
+  Search term to find the note by title. If omitted or multiple matches found, shows an interactive picker.
+</ParamField>
+
+### Examples
+
+#### View Specific Note
+
+```bash
+BLANK note view meeting
+```
+
+```
+  📝 View Secure Note
+
+  📝 Meeting Notes
+  ────────────────────────────────────────────────────────────
+
+  Discussed Q4 roadmap priorities:
+  - Launch new feature set by December
+  - Improve onboarding flow
+  - Add analytics dashboard
+
+  Action items:
+  - John: Finalize designs by Friday
+  - Sarah: Set up staging environment
+  - Team: Review PR #234
+
+  ────────────────────────────────────────────────────────────
+  Created:  3/1/2026, 10:30:45 AM
+  Modified: 3/3/2026, 2:15:20 PM
+  Length:   347 characters
+```
+
+#### Interactive View
+
+```bash
+BLANK note view
+```
+
+```
+  📝 View Secure Note
+
+  Select a note:
+  ❯ ⭐ 📝 Meeting Notes (3/3/2026)
+       📝 Personal TODO (2/28/2026)
+       📝 Password Recovery Codes (2/15/2026)
+```
+
+#### Multiple Matches
+
+```bash
+BLANK note view project
+```
+
+```
+  Select a note:
+  ❯    📝 Project Alpha Notes (3/1/2026)
+       📝 Project Beta Ideas (2/20/2026)
+```
+
+#### No Matches
+
+```bash
+BLANK note view nonexistent
+```
+
+```
+  No notes found matching "nonexistent".
+```
+
+## Subcommand: edit
+
+Edit an existing note's title or content.
+
+### Usage
+
+```bash
+BLANK note edit [search]
+```
+
+### Arguments
+
+<ParamField path="search" type="string" optional>
+  Search term to find the note by title. If omitted or multiple matches found, shows an interactive picker.
+</ParamField>
+
+### Examples
+
+#### Edit Note Content
+
+```bash
+BLANK note edit meeting
+```
+
+```
+  ✏️ Edit Secure Note
+
+  What would you like to edit?
+  ❯ Content
+    Title
+    Both
+
+  Opening editor with current content...
+
+  [Your text editor opens with existing note content]
+
+  Saving changes...
+
+  "Meeting Notes" has been updated.
+```
+
+#### Edit Note Title
+
+```bash
+BLANK note edit todo
+```
+
+```
+  What would you like to edit?
+  ❯ Content
+    Title
+    Both
+
+  [Select "Title"]
+
+  New title: [Personal TODO]
+  Updated TODO List
+
+  Saving changes...
+
+  "Updated TODO List" has been updated.
+```
+
+#### Edit Both Title and Content
+
+```bash
+BLANK note edit ideas
+```
+
+```
+  What would you like to edit?
+  ❯ Content
+    Title
+    Both
+
+  [Select "Both"]
+
+  New title: [Project Ideas]
+  Project Beta Ideas - Q2 2026
+
+  Opening editor with current content...
+
+  [Editor opens for content editing]
+```
+
+<Warning>
+Editing a note creates a new version. The modification timestamp is updated automatically.
+</Warning>
+
+## Subcommand: list
+
+List all notes in your vault.
+
+### Usage
+
+```bash
+BLANK note list
+```
+
+Alias: `note ls`
+
+You can also run `note` without any subcommand to list notes:
+
+```bash
+BLANK note
+```
+
+### Examples
+
+```bash
+BLANK note list
+```
+
+```
+  📝 Secure Notes
+
+  Found 4 notes:
+
+  ──────────────────────────────────────────────────
+  ⭐ 📝 Meeting Notes (3/3/2026)
+     📝 Personal TODO (2/28/2026)
+     📝 Password Recovery Codes (2/15/2026)
+     📝 Project Ideas (2/10/2026)
+  ──────────────────────────────────────────────────
+
+  View: note view <title>  |  Edit: note edit <title>
+```
+
+#### Empty Note List
+
+```bash
+BLANK note list
+```
+
+```
+  📝 Secure Notes
+
+  No notes found.
+  Use "BLANK note add" to create one.
+```
+
+## Default Behavior
+
+If you run `note` without a subcommand, it defaults to `list`:
+
+```bash
+BLANK note
+```
+
+This is equivalent to:
+
+```bash
+BLANK note list
+```
+
+## Search and Filtering
+
+When using `view` or `edit` with a search term:
+
+- **Case-insensitive**: Searches ignore case
+- **Partial matches**: Matches any part of the title
+- **Single match**: Automatically selects the note
+- **Multiple matches**: Shows interactive picker
+- **No matches**: Shows error message
+
+### Examples
+
+```bash
+# These all match "Meeting Notes":
+BLANK note view meeting
+BLANK note view MEETING
+BLANK note view notes
+BLANK note view meet
+```
+
+## Favorite Notes
+
+Notes can be marked as favorites using the [`favorite`](/commands/favorite) command:
+
+```bash
+BLANK favorite "Meeting Notes"
+```
+
+Favorite notes appear with a ⭐ star in the list:
+
+```
+⭐ 📝 Meeting Notes (3/3/2026)
+   📝 Personal TODO (2/28/2026)
+```
+
+## Text Editor Integration
+
+BlankDrive uses your system's default text editor:
+
+### Windows
+- Default: Notepad
+- Custom: Set `EDITOR` environment variable
+
+### Linux/macOS
+- Default: `$EDITOR` environment variable (usually nano, vim, or vi)
+- Custom: Export your preferred editor:
+  ```bash
+  export EDITOR=code  # VS Code
+  export EDITOR=nano  # Nano
+  export EDITOR=vim   # Vim
+  ```
+
+<Tip>
+For a better editing experience, set your `EDITOR` environment variable to your preferred text editor.
+</Tip>
+
+## Note Metadata
+
+Each note stores:
+
+- **Title**: Display name for the note
+- **Content**: Full text content (encrypted)
+- **Created**: Timestamp when note was created
+- **Modified**: Timestamp of last edit
+- **Length**: Character count
+- **ID**: Unique identifier
+- **Favorite**: Star status (optional)
+
+## Authentication
+
+The note command automatically unlocks the vault if needed:
+
+```
+  Unlocking vault...
+
+  Master password: ••••••••
+
+  ✓ Vault unlocked
+```
+
+## Error Handling
+
+### Empty Note Content
+
+```
+  Note content:
+
+  [Editor opens but you save without writing anything]
+
+  Content is required
+```
+
+### No Vault
+
+```bash
+BLANK note add
+```
+
+```
+  No vault found. Run "BLANK init" first.
+```
+
+### Failed to Save
+
+```
+  Saving note...
+
+  ✗ Failed to save note
+  Vault is locked or corrupted.
+```
+
+## Technical Details
+
+- Notes are stored as encrypted vault entries with type `note`
+- Content is encrypted with AES-256-GCM
+- Notes sync to Google Drive alongside passwords and files
+- Maximum note size: Limited only by available storage
+- Editor timeout: 2 minutes of inactivity
+- UTF-8 encoding for all text content
+
+## Related Commands
+
+- [`favorite`](/commands/favorite) - Mark notes as favorites
+- [`list`](/commands/list) - View all vault entries (including notes)
+- [`delete`](/commands/delete) - Delete notes
+- [`edit`](/commands/edit) - Alternative editing interface
+

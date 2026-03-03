@@ -1,0 +1,418 @@
+---
+title: Desktop App
+description: Install, use, and update the BlankDrive desktop application on Windows
+---
+
+BlankDrive Desktop is a native Windows application built with Tauri, providing a smoother and more stable experience than the CLI or web UI.
+
+## Overview
+
+The desktop app:
+
+- Uses the **same backend** as the CLI (Node.js sidecar)
+- Works with the **same vault** and data
+- Provides a **native GUI** for vault management
+- Supports all CLI features in a visual interface
+- **Lighter than Electron** (thanks to Tauri's Rust core)
+
+<Info>
+  The desktop app and CLI share the same vault at `~/.slasshy/`. You can use both interchangeably.
+</Info>
+
+## Installation
+
+### Install from CLI
+
+The easiest way to install BlankDrive Desktop is via the CLI:
+
+```bash
+BLANK desktop --install
+```
+
+**What happens:**
+
+<Steps>
+  <Step title="Fetch latest release">
+    Connects to GitHub API to get the latest desktop release metadata.
+  </Step>
+
+  <Step title="Select installer">
+    Automatically selects the appropriate `.exe` installer for your architecture (x64, arm64, or x86).
+  </Step>
+
+  <Step title="Download installer">
+    Downloads to `~/Downloads/` with a progress bar:
+    
+    ```bash
+    Release: v0.1.2
+    Asset:   BlankDrive_0.1.2_x64-setup.exe
+    Size:    12.5 MB
+    Output:  C:\Users\YourName\Downloads\BlankDrive_0.1.2_x64-setup.exe
+
+    [████████████████████] 100% | 12.5 MB / 12.5 MB
+
+    ✓ Desktop executable downloaded successfully!
+    Saved to: C:\Users\YourName\Downloads\BlankDrive_0.1.2_x64-setup.exe
+    ✓ Installer launched.
+    ```
+  </Step>
+
+  <Step title="Launch installer">
+    The installer opens automatically. Follow the Windows installation wizard.
+  </Step>
+</Steps>
+
+### Install Specific Version
+
+Download a specific release tag:
+
+```bash
+BLANK desktop --install --release v0.1.1
+```
+
+Or use version number (without `v` prefix):
+
+```bash
+BLANK desktop --install --version 0.1.1
+```
+
+### Download Only (Don't Auto-Launch)
+
+Download the installer without launching it:
+
+```bash
+BLANK desktop
+```
+
+This saves the `.exe` to `~/Downloads/` for manual installation later.
+
+### Custom Output Location
+
+Save to a specific directory:
+
+```bash
+BLANK desktop --output "C:\Installers\" --install
+```
+
+Or specify a full file path:
+
+```bash
+BLANK desktop --output "C:\Temp\blankdrive-setup.exe"
+```
+
+### Overwrite Existing File
+
+If the installer already exists:
+
+```bash
+BLANK desktop --install --force
+```
+
+This skips the overwrite confirmation prompt.
+
+## Installation Wizard
+
+After running the `.exe` installer:
+
+<Steps>
+  <Step title="Welcome screen">
+    Click **Next** to begin installation.
+  </Step>
+
+  <Step title="Choose install location">
+    Default: `C:\Program Files\BlankDrive\`
+    
+    You can change this if needed.
+  </Step>
+
+  <Step title="Start menu shortcuts">
+    Optionally create Start Menu shortcuts.
+  </Step>
+
+  <Step title="Install">
+    Click **Install** to begin file extraction.
+  </Step>
+
+  <Step title="Launch BlankDrive">
+    Check "Run BlankDrive" and click **Finish**.
+  </Step>
+</Steps>
+
+BlankDrive Desktop will launch automatically.
+
+## Using the Desktop App
+
+### First Launch
+
+When you first open BlankDrive Desktop:
+
+1. **Existing vault:** If you already have a vault from CLI, it will be detected automatically. You'll be prompted to unlock it with your master password.
+
+2. **New vault:** If no vault exists, you'll see the vault creation screen:
+   - Set a master password
+   - Confirm password
+   - Click "Create Vault"
+
+### Main Interface
+
+The desktop app has several views:
+
+- **Passwords:** List and manage password entries
+- **Notes:** Create and view secure notes
+- **Files:** Upload and download encrypted files
+- **Settings:** Configure storage mode, folder, and app preferences
+- **Sync:** Manual sync to Google Drive
+
+### Adding a Password
+
+1. Click **Add Password** button
+2. Fill in the form:
+   - Title (required)
+   - Username
+   - Password (or click "Generate")
+   - URL
+   - Notes
+3. Click **Save**
+
+The entry is immediately encrypted and saved.
+
+### Viewing a Password
+
+1. Click on an entry from the list
+2. Password is hidden by default (shows `************`)
+3. Click the **eye icon** to reveal
+4. Click **Copy** to copy password to clipboard (auto-clears in 30 seconds)
+
+### Uploading a File
+
+1. Go to **Files** tab
+2. Click **Upload File**
+3. Select file from file picker
+4. File is encrypted and uploaded to Google Drive
+5. Progress bar shows upload status
+
+### Downloading a File
+
+1. Go to **Files** tab
+2. Click on a file entry
+3. Click **Download**
+4. Choose save location
+5. File is downloaded, decrypted, and saved
+
+### Google Drive Authentication
+
+1. Go to **Settings** → **Google Drive**
+2. Click **Authenticate**
+3. Enter OAuth Client ID and Secret
+4. Browser opens for Google consent
+5. Return to the app after authorization
+
+## App Architecture
+
+BlankDrive Desktop uses:
+
+- **Tauri** (Rust-based webview framework)
+- **Node.js sidecar** (bundled CLI backend)
+- **Web UI** (same as `BLANK web`)
+
+**Benefits:**
+
+- **Small bundle size:** ~12-15 MB (vs 100+ MB for Electron apps)
+- **Fast startup:** Native Rust core
+- **Shared backend:** Same encryption logic as CLI
+- **Cross-platform ready:** Currently Windows, macOS/Linux support planned
+
+## Updates
+
+### Check for Updates
+
+Use the CLI to check for desktop updates:
+
+```bash
+BLANK desktop --release latest
+```
+
+This fetches the latest GitHub release and shows version info without downloading.
+
+### Install Latest Version
+
+Download and install the latest release:
+
+```bash
+BLANK desktop --install
+```
+
+This always fetches the latest version unless you specify `--release`.
+
+### In-App Updates
+
+Currently, the desktop app does NOT have built-in auto-update. Use the CLI method above or manually download from GitHub.
+
+<Note>
+  Auto-update functionality is planned for a future release.
+</Note>
+
+## Configuration
+
+### App Data Location
+
+The desktop app uses the same vault as CLI:
+
+```
+C:\Users\<YourName>\.slasshy\
+```
+
+All vault data, OAuth credentials, and settings are shared.
+
+### Desktop-Specific Settings
+
+Currently, the desktop app uses CLI settings. Desktop-specific preferences (theme, window size, etc.) may be added in future releases.
+
+## Advanced Options
+
+### Select Specific Asset
+
+If a release has multiple `.exe` files, specify which one to download:
+
+```bash
+BLANK desktop --asset "BlankDrive_0.1.2_arm64-setup.exe" --install
+```
+
+### Non-Interactive Mode
+
+For scripts or automation:
+
+```bash
+BLANK desktop --install --force --quiet
+```
+
+- `--force`: Skip overwrite prompt
+- `--quiet`: Suppress output (except errors)
+
+### Using GitHub Token
+
+If you hit GitHub API rate limits:
+
+```bash
+export GITHUB_TOKEN="ghp_your_token_here"
+BLANK desktop --install
+```
+
+This increases rate limits from 60 to 5000 requests/hour.
+
+## Uninstallation
+
+### Windows Uninstaller
+
+1. Open **Settings** → **Apps** → **Installed apps**
+2. Find **BlankDrive**
+3. Click **Uninstall**
+4. Follow the uninstaller wizard
+
+<Warning>
+  Uninstalling the desktop app does NOT delete your vault. Vault data remains at `~/.slasshy/` for use with CLI or future reinstalls.
+</Warning>
+
+### Remove Vault Data
+
+To completely remove all BlankDrive data:
+
+1. Uninstall the desktop app (if installed)
+2. Delete vault folder:
+   ```powershell
+   Remove-Item -Recurse -Force "$env:USERPROFILE\.slasshy"
+   ```
+
+**Caution:** This is permanent. Make sure you have backups or sync to Google Drive.
+
+## Troubleshooting
+
+<Accordion title="Installer won't run">
+  **Cause:** Windows SmartScreen blocking unknown publisher.
+
+  **Solution:**
+  1. Right-click the `.exe` file
+  2. Select **Properties**
+  3. Check **Unblock** at the bottom
+  4. Click **Apply** → **OK**
+  5. Run installer again
+</Accordion>
+
+<Accordion title="App crashes on startup">
+  **Cause:** Corrupted vault or missing dependencies.
+
+  **Solution:**
+  1. Check vault integrity via CLI: `BLANK status`
+  2. Try unlocking via CLI: `BLANK list`
+  3. If vault is corrupted, restore from Google Drive: `BLANK init --restore`
+  4. Reinstall the desktop app
+</Accordion>
+
+<Accordion title="Can't authenticate with Google Drive">
+  **Cause:** OAuth credentials not configured or browser blocked.
+
+  **Solution:**
+  1. Close the desktop app
+  2. Use CLI to set up OAuth: `BLANK auth --setup`
+  3. Reopen the desktop app
+  4. Try authenticating again
+</Accordion>
+
+<Accordion title="Download fails with 'Not found' error">
+  **Cause:** Invalid release tag or no desktop releases available.
+
+  **Solution:**
+  1. Check available releases: https://github.com/SlasshyOverhere/BlankDrive/releases
+  2. Verify desktop `.exe` assets exist
+  3. Try latest: `BLANK desktop --install` (without specifying version)
+</Accordion>
+
+<Accordion title="GitHub API rate limit">
+  **Cause:** Too many requests to GitHub API (anonymous limit: 60/hour).
+
+  **Solution:**
+  1. Wait an hour for rate limit reset
+  2. Or create a GitHub personal access token:
+     - Go to https://github.com/settings/tokens
+     - Generate new token (no scopes needed for public repos)
+     - Set environment variable: `set GITHUB_TOKEN=ghp_yourtoken`
+     - Retry download
+</Accordion>
+
+## Platform Support
+
+| Platform | Status | Installer Format |
+|----------|--------|------------------|
+| Windows x64 | ✅ Supported | `.exe` |
+| Windows arm64 | ✅ Supported | `.exe` |
+| macOS | 🚧 Planned | `.dmg` |
+| Linux | 🚧 Planned | `.AppImage`, `.deb` |
+
+<Info>
+  macOS and Linux desktop builds are planned for future releases. For now, use the CLI or web UI on those platforms.
+</Info>
+
+## Comparison: Desktop vs CLI vs Web UI
+
+| Feature | Desktop App | CLI | Web UI |
+|---------|-------------|-----|--------|
+| Native UI | ✅ Yes | ❌ No | ⚠️ Browser | 
+| Startup Speed | ⚠️ Fast | ✅ Instant | ⚠️ Fast |
+| Bundle Size | ⚠️ 12-15 MB | ✅ ~10 MB | ✅ ~10 MB |
+| Always Available | ✅ Yes | ✅ Yes | ⚠️ Server must run |
+| Automation/Scripts | ❌ No | ✅ Yes | ⚠️ API only |
+| Visual Interface | ✅ Yes | ❌ No | ✅ Yes |
+| OAuth Browser Flow | ✅ Integrated | ✅ Auto-opens | ✅ Auto-opens |
+| File Management | ✅ GUI | ✅ CLI | ✅ GUI |
+| Offline Mode | ✅ Yes | ✅ Yes | ⚠️ Requires server |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Web UI" icon="browser" href="/guides/web-ui">
+    Use the local web interface
+  </Card>
+  <Card title="Vault Management" icon="lock" href="/guides/vault-management">
+    Learn vault operations
+  </Card>
+</CardGroup>

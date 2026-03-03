@@ -1,0 +1,267 @@
+---
+title: 'list'
+description: 'Display all entries in your vault with filtering options'
+---
+
+## Usage
+
+```bash
+BLANK list [options]
+BLANK ls [options]
+```
+
+List all entries stored in your vault, including passwords, files, and notes. Entries are displayed in organized groups with metadata.
+
+## Options
+
+<ParamField path="--filter" type="string" optional>
+  Filter entries by title. Only entries whose title contains this term (case-insensitive) will be shown.
+  
+  **Alias:** `-f`
+  
+  **Example:**
+  ```bash
+  BLANK list --filter github
+  BLANK ls -f work
+  ```
+</ParamField>
+
+<ParamField path="--type" type="string" optional>
+  Filter entries by type. Accepts: `passwords`, `password`, `files`, `file`, `notes`, or `note`.
+  
+  **Alias:** `-t`
+  
+  **Example:**
+  ```bash
+  BLANK list --type passwords
+  BLANK ls -t files
+  ```
+</ParamField>
+
+<ParamField path="--category" type="string" optional>
+  Filter entries by category name (case-insensitive).
+  
+  **Alias:** `-c`
+  
+  **Example:**
+  ```bash
+  BLANK list --category work
+  BLANK ls -c personal
+  ```
+</ParamField>
+
+## Alias
+
+You can use the shorter alias `ls`:
+
+```bash
+BLANK ls
+BLANK ls --type passwords
+```
+
+## Examples
+
+### List All Entries
+
+```bash
+BLANK list
+```
+
+**Output:**
+```bash
+  Passwords (5)
+  ────────────────────────────────────────────────────────────
+   1.    🔐 GitHub                        2/20/2024
+   2. ⭐  🔐 Gmail                          2/18/2024
+   3.    🔐 [Work] Slack                   2/15/2024
+   4.    🔐 AWS Console                   2/10/2024
+   5.    🔐 Database Prod                 1/28/2024
+
+  Notes (2)
+  ────────────────────────────────────────────────────────────
+   1. ⭐  📝 Meeting Notes                  2/19/2024
+   2.    📝 Project Ideas                 2/12/2024
+
+  Files (3)
+  ────────────────────────────────────────────────────────────
+   1.    🖼️ vacation.jpg                2.4 MB      2/18/2024
+   2.    📕 contract.pdf                1.2 MB      2/10/2024
+   3.    📦 backup.zip                  15.8 MB     1/30/2024
+  ────────────────────────────────────────────────────────────
+  Total: 10 entries (5 passwords, 2 notes, 3 files)
+  Download files: dl <name>  |  View notes: note view <name>
+```
+
+### Filter by Title
+
+```bash
+BLANK list --filter git
+```
+
+Shows only entries with "git" in the title (GitHub, GitLab, etc.).
+
+### Filter by Type
+
+<CodeGroup>
+```bash Passwords only
+BLANK list --type passwords
+BLANK ls -t password
+```
+
+```bash Files only
+BLANK list --type files
+BLANK ls -t file
+```
+
+```bash Notes only
+BLANK list --type notes
+BLANK ls -t note
+```
+</CodeGroup>
+
+### Filter by Category
+
+```bash
+BLANK list --category work
+```
+
+Shows only entries tagged with the "work" category.
+
+### Combined Filters
+
+```bash
+# Show work passwords with "aws" in title
+BLANK list --type passwords --category work --filter aws
+```
+
+## Display Format
+
+### Password Entries
+
+Format: `[number] [star] [icon] [category] [title] [date]`
+
+- **Number**: Sequential numbering for easy reference
+- **Star (⭐)**: Shown for favorite entries
+- **Icon (🔐)**: Password entry indicator
+- **Category**: Shown in brackets if set (e.g., `[Work]`)
+- **Title**: Entry name (truncated if too long)
+- **Date**: Last modified date
+
+### Note Entries
+
+Format: `[number] [star] [icon] [title] [date]`
+
+- **Icon (📝)**: Note entry indicator
+- **Title**: Note title (truncated to 28 characters)
+
+### File Entries
+
+Format: `[number] [star] [icon] [title] [size] [date]`
+
+- **Icon**: Type-specific icons:
+  - 🖼️ Images (image/*)
+  - 🎬 Videos (video/*)
+  - 🎵 Audio (audio/*)
+  - 📕 PDFs (.pdf)
+  - 📦 Archives (.zip, .rar, .7z)
+  - 📄 Other files
+- **Size**: Human-readable file size (B, KB, MB, GB)
+- **Title**: Filename (truncated to 20 characters)
+
+### File Size Formatting
+
+File sizes are displayed in human-readable format:
+
+- **Bytes**: `< 1 KB` → `842 B`
+- **Kilobytes**: `< 1 MB` → `150.5 KB`
+- **Megabytes**: `< 1 GB` → `2.4 MB`
+- **Gigabytes**: `≥ 1 GB` → `1.25 GB`
+
+## Empty Vault
+
+If your vault has no entries:
+
+```bash
+  No entries found.
+
+  Use "BLANK add" for passwords or "BLANK upload" for files.
+```
+
+## Auto-Authentication
+
+<Note>
+The list command automatically handles vault unlocking and Google Drive authentication.
+</Note>
+
+If needed, you'll be prompted for:
+1. Master password (to unlock vault)
+2. Google Drive authentication (if cloud sync is enabled)
+
+## Favorites
+
+Entries marked as favorites show a ⭐ star next to their number.
+
+To mark entries as favorites:
+
+```bash
+BLANK favorite <search>
+BLANK fav <search>
+```
+
+View only favorites:
+
+```bash
+BLANK favorites
+```
+
+## Duress Mode
+
+<Note>
+If duress mode is active, only fake decoy entries are displayed instead of real vault contents.
+</Note>
+
+In duress mode:
+- Decoy entries appear like real entries
+- Shows realistic dates and counts
+- Protects your actual vault contents
+
+## Performance
+
+The list command is optimized for large vaults:
+
+- Entries are loaded from the vault index (fast)
+- File metadata is read without decrypting file contents
+- Filtering happens in-memory after loading
+
+<Tip>
+For vaults with hundreds of entries, use filters to narrow results and improve readability.
+</Tip>
+
+## Related Commands
+
+- [`get`](/commands/get) - View specific entries
+- [`add`](/commands/add) - Add new password entries
+- [`upload`](/commands/upload) - Upload files to vault
+- [`favorites`](/commands/favorites) - View favorite entries only
+- [`note`](/commands/note) - Manage notes
+
+## Error Handling
+
+### Vault Not Found
+
+```bash
+  No vault found. Run "BLANK init" first.
+```
+
+### Authentication Failed
+
+```bash
+  Failed to authenticate with Google Drive
+```
+
+### Load Error
+
+```bash
+✗ Failed to list entries
+  Unable to read vault index
+```

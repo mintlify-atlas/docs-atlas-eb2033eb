@@ -1,0 +1,466 @@
+---
+title: "audit"
+description: "Analyze password security, strength, and expiry status across your vault"
+icon: "shield-check"
+---
+
+## Overview
+
+The `audit` command scans all password entries in your vault and provides a comprehensive security report. It checks for expired passwords, weak passwords, and provides strength analysis with actionable recommendations.
+
+<Note>
+Audit only analyzes **password entries**. Files and notes are not included in the security audit.
+</Note>
+
+## Usage
+
+```bash
+BLANK audit [options]
+```
+
+## Options
+
+<ParamField path="-a, --all" type="boolean">
+  Show all passwords including up-to-date ones. By default, only expired and expiring passwords are shown.
+</ParamField>
+
+## Default Behavior
+
+By default, `audit` shows:
+
+1. **Password Age Summary**: Counts of up-to-date, expiring soon, and expired passwords
+2. **Password Strength Summary**: Distribution of password strength levels
+3. **Weak Passwords**: Passwords with Very Weak or Weak strength (immediate attention needed)
+4. **Expired Passwords**: Passwords that exceeded their expiry period
+5. **Expiring Soon**: Passwords approaching expiry (75% of expiry period reached)
+6. **Recommendations**: Actionable security tips
+
+## Examples
+
+### Basic Audit
+
+```bash
+BLANK audit
+```
+
+```
+  🔍 Password Security Audit
+
+  Analyzing passwords...
+
+  ────────────────────────────────────────────────────────────
+
+  📊 Password Age Summary:
+  ✓ 8 passwords are up to date
+  ⚠ 2 passwords expiring soon
+  ✗ 1 passwords have expired
+
+  🔐 Password Strength Summary:
+  🔴 Very Weak: 1  🟠 Weak: 1  🟡 Fair: 2  🟢 Strong: 6  💚 Very Strong: 1
+
+  🚨 Weak Passwords (need immediate attention):
+  ────────────────────────────────────────────────────────────
+  🔴 Old Forum Account
+      Strength: ████░░░░░░░░░░░░░░░░ VERY WEAK
+      ⚠ This is a common password
+
+  🟠 Testing Site
+      Strength: ████████░░░░░░░░░░░░ WEAK
+      ⚠ Too short - increase length
+
+  ⏰ Expired Passwords (need immediate change):
+  ────────────────────────────────────────────────────────────
+  ✗ Bank of America 🟢
+      Age: 4 months (32 days overdue)
+
+  ⚠️  Passwords Expiring Soon:
+  ────────────────────────────────────────────────────────────
+  ⚠ Work Email 💚
+      Age: 2 months (15 days until expiry)
+
+  ⚠ GitHub 🟢
+      Age: 2 months (8 days until expiry)
+
+  ────────────────────────────────────────────────────────────
+  📋 Recommendations:
+  • Use "BLANK edit <entry>" to update passwords
+  • Use "BLANK generate" to create strong passwords
+  • Prioritize strengthening weak passwords
+  • Consider using unique passwords for each account
+```
+
+### Show All Passwords
+
+Use `--all` to include up-to-date passwords in the report:
+
+```bash
+BLANK audit --all
+```
+
+```
+  🔍 Password Security Audit
+
+  Analyzing passwords...
+
+  ────────────────────────────────────────────────────────────
+
+  📊 Password Age Summary:
+  ✓ 8 passwords are up to date
+  ⚠ 2 passwords expiring soon
+  ✗ 1 passwords have expired
+
+  🔐 Password Strength Summary:
+  🔴 Very Weak: 0  🟠 Weak: 0  🟡 Fair: 1  🟢 Strong: 8  💚 Very Strong: 2
+
+  ⏰ Expired Passwords (need immediate change):
+  ────────────────────────────────────────────────────────────
+  ✗ Bank of America 🟢
+      Age: 4 months (32 days overdue)
+
+  ⚠️  Passwords Expiring Soon:
+  ────────────────────────────────────────────────────────────
+  ⚠ Work Email 💚
+      Age: 2 months (15 days until expiry)
+
+  ⚠ GitHub 🟢
+      Age: 2 months (8 days until expiry)
+
+  ✓ Up-to-date Passwords:
+  ────────────────────────────────────────────────────────────
+  ✓ Gmail 💚 (15 days old)
+  ✓ Dropbox 🟢 (1 month old)
+  ✓ AWS Console 🟢 (1 month old)
+  ✓ Slack 🟢 (2 months old)
+  ✓ Apple ID 💚 (2 months old)
+  ✓ Netflix 🟢 (2 months old)
+  ✓ Spotify 🟡 (2 months old)
+  ✓ LinkedIn 🟢 (2 months old)
+
+  ────────────────────────────────────────────────────────────
+  📋 Recommendations:
+  • Use "BLANK edit <entry>" to update passwords
+  • Use "BLANK generate" to create strong passwords
+  • Consider using unique passwords for each account
+```
+
+### Perfect Security
+
+If all passwords are strong and up-to-date:
+
+```bash
+BLANK audit
+```
+
+```
+  🔍 Password Security Audit
+
+  Analyzing passwords...
+
+  ────────────────────────────────────────────────────────────
+
+  📊 Password Age Summary:
+  ✓ 12 passwords are up to date
+
+  🔐 Password Strength Summary:
+  🔴 Very Weak: 0  🟠 Weak: 0  🟡 Fair: 0  🟢 Strong: 9  💚 Very Strong: 3
+
+  ✓ All passwords are up to date and strong!
+```
+
+## Password Age Tracking
+
+### Expiry Period
+
+Each password has an **expiry period** (default: 90 days). This determines when a password is considered:
+
+- **Good**: Age < 75% of expiry period
+- **Warning**: Age ≥ 75% of expiry period
+- **Expired**: Age ≥ expiry period
+
+### Age Display Format
+
+| Age | Display Format |
+|-----|---------------|
+| 0 days | Today |
+| 1 day | 1 day |
+| 2-29 days | X days |
+| 30-364 days | X months |
+| 365+ days | X years |
+
+### Examples
+
+```
+Age: 15 days
+Age: 2 months
+Age: 1 year
+```
+
+### Overdue Calculation
+
+For expired passwords, the report shows how many days overdue:
+
+```
+Age: 4 months (32 days overdue)
+```
+
+This means the password is 122 days old with a 90-day expiry period (122 - 90 = 32 days overdue).
+
+### Days Until Expiry
+
+For expiring passwords, the report shows remaining days:
+
+```
+Age: 2 months (15 days until expiry)
+```
+
+This means the password is 75 days old and will expire in 15 days (90 - 75 = 15).
+
+## Password Strength Analysis
+
+### Strength Levels
+
+| Icon | Level | Score | Description |
+|------|-------|-------|-------------|
+| 🔴 | Very Weak | 0 | Extremely unsafe |
+| 🟠 | Weak | 1 | Easily cracked |
+| 🟡 | Fair | 2 | Marginally safe |
+| 🟢 | Strong | 3 | Safe |
+| 💚 | Very Strong | 4 | Very safe |
+
+### Strength Icons in Reports
+
+Each password entry shows its strength icon:
+
+```
+✗ Bank of America 🟢      (expired, but strong)
+⚠ Work Email 💚           (expiring soon, very strong)
+🔴 Old Forum Account      (weak password - needs attention)
+```
+
+### Strength Bar Visualization
+
+For weak passwords, a visual bar shows the strength score:
+
+```
+Strength: ████░░░░░░░░░░░░░░░░ VERY WEAK
+Strength: ████████░░░░░░░░░░░░ WEAK
+Strength: ████████████░░░░░░░░ FAIR
+Strength: ████████████████░░░░ STRONG
+Strength: ████████████████████ EXCELLENT
+```
+
+### Weak Password Feedback
+
+For Very Weak and Weak passwords, the audit provides specific feedback:
+
+```
+🔴 Old Forum Account
+    Strength: ████░░░░░░░░░░░░░░░░ VERY WEAK
+    ⚠ This is a common password
+
+🟠 Testing Site
+    Strength: ████████░░░░░░░░░░░░ WEAK
+    ⚠ Too short - increase length
+```
+
+Common feedback messages:
+- "This is a common password"
+- "Add another word or two"
+- "Predictable substitutions are easy to guess"
+- "Straight rows of keys are easy to guess"
+- "Short keyboard patterns are easy to guess"
+
+## Prioritization
+
+The audit report prioritizes security issues in this order:
+
+1. **🚨 Weak Passwords** (Very Weak/Weak strength)
+2. **⏰ Expired Passwords** (age exceeded expiry period)
+3. **⚠️ Expiring Soon** (75%+ of expiry period used)
+4. **✓ Up-to-date** (shown only with `--all` flag)
+
+<Tip>
+Focus on strengthening weak passwords first, even if they're not expired yet.
+</Tip>
+
+## Summary Statistics
+
+### Password Age Summary
+
+Shows the distribution of password ages:
+
+```
+📊 Password Age Summary:
+✓ 8 passwords are up to date
+⚠ 2 passwords expiring soon
+✗ 1 passwords have expired
+? 0 passwords with unknown age
+```
+
+### Password Strength Summary
+
+Shows the distribution of password strengths:
+
+```
+🔐 Password Strength Summary:
+🔴 Very Weak: 1  🟠 Weak: 1  🟡 Fair: 2  🟢 Strong: 6  💚 Very Strong: 1
+```
+
+<Warning>
+If you have any Very Weak (🔴) or Weak (🟠) passwords, update them immediately.
+</Warning>
+
+## Authentication
+
+The audit command automatically unlocks the vault if needed:
+
+```
+  🔍 Password Security Audit
+
+  Unlocking vault...
+
+  Master password: ••••••••
+
+  ✓ Vault unlocked
+
+  Analyzing passwords...
+```
+
+## Error Handling
+
+### No Vault Found
+
+```bash
+BLANK audit
+```
+
+```
+  No vault found. Run "BLANK init" first.
+```
+
+### No Password Entries
+
+```bash
+BLANK audit
+```
+
+```
+  Analyzing passwords...
+
+  No password entries found.
+```
+
+### Audit Failed
+
+```
+  Analyzing passwords...
+
+  ✗ Audit failed
+  Vault index is corrupted.
+```
+
+## Use Cases
+
+### Regular Security Checkup
+
+Run audit monthly to maintain password hygiene:
+
+```bash
+BLANK audit
+```
+
+### Pre-Compliance Audit
+
+Before security compliance reviews, ensure all passwords meet standards:
+
+```bash
+BLANK audit --all
+```
+
+### Post-Breach Response
+
+After a security breach, audit to find and update affected passwords:
+
+```bash
+BLANK audit
+# Update all expired and weak passwords
+```
+
+### New Vault Setup
+
+After importing passwords from another source, audit to find weak entries:
+
+```bash
+BLANK audit --all
+```
+
+## Actionable Workflow
+
+1. **Run the audit**:
+   ```bash
+   BLANK audit
+   ```
+
+2. **Update weak passwords first**:
+   ```bash
+   BLANK edit "Old Forum Account"
+   ```
+   Use the built-in generator to create a strong password.
+
+3. **Update expired passwords**:
+   ```bash
+   BLANK edit "Bank of America"
+   ```
+
+4. **Update expiring passwords**:
+   ```bash
+   BLANK edit "Work Email"
+   BLANK edit "GitHub"
+   ```
+
+5. **Verify improvements**:
+   ```bash
+   BLANK audit
+   ```
+
+## Recommendations
+
+The audit report includes tailored recommendations:
+
+- **Edit command**: Update passwords with `BLANK edit <entry>`
+- **Generate command**: Create strong passwords with `BLANK generate`
+- **Weak password priority**: Strengthen weak passwords before expiry
+- **Unique passwords**: Use different passwords for each account
+
+## Technical Details
+
+- **Age calculation**: Based on `passwordLastChanged` timestamp (falls back to `created`)
+- **Default expiry**: 90 days (customizable per entry)
+- **Warning threshold**: 75% of expiry period
+- **Strength algorithm**: Based on zxcvbn password strength estimation
+- **Entropy calculation**: `log2(charset_size ^ length)`
+- **Entry filtering**: Only analyzes entries with `entryType === 'password'`
+
+## Password Last Changed Tracking
+
+Every password entry tracks:
+
+- **`created`**: When the entry was first added
+- **`passwordLastChanged`**: When the password was last updated
+
+When you edit a password, `passwordLastChanged` is automatically updated:
+
+```bash
+BLANK edit gmail
+# Update password
+```
+
+The audit uses `passwordLastChanged` (or `created` if not set) to calculate age.
+
+## Related Commands
+
+- [`generate`](/commands/generate) - Generate strong passwords
+- [`edit`](/commands/edit) - Update password entries
+- [`list`](/commands/list) - View all vault entries
+- [`get`](/commands/get) - View individual password entries with expiry warnings
+

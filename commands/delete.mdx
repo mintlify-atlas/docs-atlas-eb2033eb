@@ -1,0 +1,341 @@
+---
+title: 'delete'
+description: 'Remove entries from your vault (local and cloud)'
+---
+
+## Usage
+
+```bash
+BLANK delete <search> [options]
+BLANK rm <search> [options]
+```
+
+Permanently delete an entry from your vault, including both local storage and cloud backups.
+
+<Note>
+Deletion is permanent and cannot be undone. Always confirm before deleting important entries.
+</Note>
+
+## Arguments
+
+<ParamField path="search" type="string" required>
+  Search term or number to identify the entry to delete.
+  
+  Can be:
+  - **Entry title** or partial title (e.g., `github`)
+  - **Numeric index** from the list command (e.g., `1`, `5`)
+  
+  **Example:**
+  ```bash
+  BLANK delete github
+  BLANK delete 3
+  ```
+</ParamField>
+
+## Options
+
+<ParamField path="--force" type="boolean" default="false">
+  Skip the confirmation prompt and delete immediately.
+  
+  **Alias:** `-f`
+  
+  **Example:**
+  ```bash
+  BLANK delete github --force
+  BLANK rm 3 -f
+  ```
+</ParamField>
+
+## Alias
+
+You can use the shorter alias `rm`:
+
+```bash
+BLANK rm github
+BLANK rm 5 --force
+```
+
+## Examples
+
+### Delete by Title
+
+```bash
+BLANK delete github
+```
+
+**With confirmation:**
+```bash
+✓ Vault unlocked
+✓ Searching...
+
+? Delete "GitHub Personal"? This cannot be undone. (y/N)
+```
+
+### Delete by Number
+
+Use the number from `BLANK list` output:
+
+```bash
+# First, list entries to see numbers
+BLANK list
+
+  Passwords (3)
+  ────────────────────────────────────────────────────────────
+   1.    🔐 GitHub                        2/20/2024
+   2.    🔐 Gmail                          2/18/2024
+   3.    🔐 AWS                            2/15/2024
+
+# Then delete by number
+BLANK delete 2
+```
+
+<Tip>
+Using numbers is faster than typing full entry names.
+</Tip>
+
+### Skip Confirmation
+
+```bash
+# Delete without confirmation prompt
+BLANK delete github --force
+BLANK rm 3 -f
+```
+
+<Note>
+Use `--force` carefully! There's no undo for deletions.
+</Note>
+
+## Interactive Workflow
+
+### Step 1: Search
+
+The command searches for matching entries:
+
+```bash
+$ BLANK delete github
+
+✓ Searching...
+```
+
+### Step 2: Select (if multiple matches)
+
+If multiple entries match, you'll be prompted to select:
+
+```bash
+  Found 2 entries:
+
+? Select entry:
+  1. GitHub Personal - 2/20/2024
+  2. GitHub Work - 2/15/2024
+```
+
+### Step 3: Confirm
+
+Unless `--force` is used, you must confirm:
+
+```bash
+? Delete "GitHub Personal"? This cannot be undone. (y/N)
+```
+
+Type `y` or `yes` to confirm, or `n`/`no` to cancel.
+
+### Step 4: Delete
+
+The entry is deleted from both local and cloud:
+
+```bash
+⠋ Deleting entry...
+⠙ Deleting from cloud...
+⠹ Deleting local entry...
+✓ Entry deleted
+
+  "GitHub Personal" has been deleted from local and cloud.
+```
+
+## Deletion Process
+
+### For Password Entries
+
+1. Entry is removed from the local vault
+2. Vault index is updated
+3. Changes are synced (no cloud files for passwords)
+
+### For File Entries
+
+1. Cloud chunks are deleted from Google Drive
+2. Local encrypted file is removed
+3. Vault index is updated
+
+<Tip>
+File deletions may take longer as cloud chunks must be removed individually.
+</Tip>
+
+### Cloud Deletion Failures
+
+If cloud deletion fails (e.g., no internet, Drive API error):
+
+```bash
+⚠ Cloud deletion failed
+  Unable to connect to Google Drive
+
+? Delete local entry anyway? (Cloud files may remain) (Y/n)
+```
+
+You can choose to:
+- **Delete locally anyway** - Entry removed but cloud chunks remain
+- **Cancel** - Keep entry intact
+
+<Note>
+Orphaned cloud chunks can be cleaned up later by re-running delete or using cloud management tools.
+</Note>
+
+## Numeric Index Behavior
+
+When using numbers from `BLANK list`:
+
+### Single Match
+
+If the number uniquely identifies an entry:
+
+```bash
+BLANK delete 5
+# Directly deletes the 5th entry
+```
+
+### Ambiguous Index
+
+If the same number exists in both passwords and files:
+
+```bash
+$ BLANK delete 1
+
+  Ambiguous index: 1 matches both a file and a password.
+
+? Which one do you want to delete?
+  Password: GitHub
+  File: vacation.jpg
+```
+
+### Invalid Number
+
+```bash
+$ BLANK delete 99
+
+  Invalid number: 99
+  Files range: 1-3
+  Passwords range: 1-5
+  Use "list" to see entries.
+```
+
+## Security Features
+
+### Audit Logging
+
+Deletion events are logged:
+
+- **Event Type**: `entry_deleted`
+- **Logged Data**: Entry ID and title
+- **Timestamp**: Automatically recorded
+
+View audit logs:
+
+```bash
+BLANK audit
+```
+
+### Auto-Authentication
+
+<Note>
+The delete command automatically handles vault unlocking and Google Drive authentication.
+</Note>
+
+### Duress Mode Protection
+
+<Note>
+In duress mode, the delete command appears to work but no actual data is deleted.
+</Note>
+
+Duress mode behavior:
+- Shows fake decoy entries
+- Accepts deletion requests
+- Displays success messages
+- Real vault contents remain untouched
+
+## Error Handling
+
+### No Search Term Provided
+
+```bash
+$ BLANK delete
+
+  Please specify an entry to delete.
+
+  Usage: BLANK delete <number> or BLANK delete <title>
+```
+
+### Entry Not Found
+
+```bash
+$ BLANK delete nonexistent
+
+✓ Searching...
+
+  No entries found matching "nonexistent".
+```
+
+### Deletion Failed
+
+```bash
+✗ Failed to delete entry
+  Unable to write to vault
+```
+
+### Authentication Failed
+
+```bash
+  Failed to authenticate with Google Drive
+```
+
+## Cancellation
+
+You can cancel at any prompt:
+
+```bash
+? Delete "GitHub"? This cannot be undone. (y/N) n
+
+  Cancelled.
+```
+
+## Related Commands
+
+- [`list`](/commands/list) - View all entries with numbers
+- [`get`](/commands/get) - View entry details before deleting
+- [`edit`](/commands/edit) - Modify entries instead of deleting
+- [`add`](/commands/add) - Add new entries
+
+## Best Practices
+
+<Tip>
+Before deleting important entries, use `BLANK get <search>` to verify you're deleting the right one.
+</Tip>
+
+### Pre-Deletion Checklist
+
+1. **Verify the entry**: Use `BLANK get <search>` to view details
+2. **Check for duplicates**: Ensure you're not deleting the wrong entry
+3. **Backup first**: Run `BLANK sync` to ensure cloud backup is current
+4. **Consider editing**: Use `BLANK edit` if you just need to update values
+
+### Bulk Deletion
+
+To delete multiple entries, run the command multiple times:
+
+```bash
+BLANK delete old-account-1 -f
+BLANK delete old-account-2 -f
+BLANK delete old-account-3 -f
+```
+
+<Note>
+There is no built-in bulk delete command to prevent accidental mass deletions.
+</Note>

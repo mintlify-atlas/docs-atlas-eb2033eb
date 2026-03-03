@@ -1,0 +1,317 @@
+---
+title: Installation
+description: Install BlankDrive CLI globally or build from source
+---
+
+## Requirements
+
+Before installing BlankDrive, ensure you have:
+
+<CardGroup cols={2}>
+  <Card title="Node.js 18+" icon="node-js">
+    Node.js 18 or higher (22 recommended)
+  </Card>
+  <Card title="npm Package Manager" icon="box">
+    npm comes bundled with Node.js
+  </Card>
+  <Card title="Google Account" icon="google">
+    Required for cloud sync functionality
+  </Card>
+  <Card title="Google Cloud Project" icon="cloud">
+    Needed for OAuth credentials (free tier is sufficient)
+  </Card>
+</CardGroup>
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="npm (Recommended)">
+    ### Install Globally via npm
+
+    The easiest way to install BlankDrive is through npm:
+
+    ```bash
+    npm install -g blankdrive
+    ```
+
+    This installs both command aliases:
+    - `blankdrive` (default)
+    - `BLANK` (shorter alias)
+
+    ### Verify Installation
+
+    ```bash
+    blankdrive version
+    # or
+    BLANK version
+    ```
+
+    You should see:
+    ```
+    BlankDrive v0.1.2
+    ```
+
+    <Tip>
+      Use `BLANK` for faster typing in daily usage. All documentation examples work with either command.
+    </Tip>
+  </Tab>
+
+  <Tab title="From Source">
+    ### Build from Source
+
+    Clone the repository and build locally:
+
+    ```bash
+    # Clone the repository
+    git clone https://github.com/SlasshyOverhere/BlankDrive.git
+    cd BlankDrive
+
+    # Install dependencies
+    npm install
+
+    # Build TypeScript to JavaScript
+    npm run build
+
+    # Link globally
+    npm link
+    ```
+
+    ### Development Mode
+
+    Run without building:
+
+    ```bash
+    npm run dev
+    # or
+    npm run BLANK
+    ```
+
+    <Info>
+      Building from source is useful for contributors or users who want to inspect the code before installation.
+    </Info>
+  </Tab>
+
+  <Tab title="Desktop App">
+    ### Desktop Installer (Windows)
+
+    Install the native desktop application directly from CLI:
+
+    ```bash
+    BLANK desktop --install
+    ```
+
+    This downloads and installs the Tauri-based desktop app, which provides:
+    - Native window with same backend as CLI
+    - Faster boot time than web UI
+    - No separate desktop backend (uses `BLANK web` sidecar)
+    - Same vault, same data, same commands
+
+    <Note>
+      The desktop app requires the CLI to be installed first. It uses the same Node.js runtime and vault storage.
+    </Note>
+
+    ### Install Specific Release
+
+    ```bash
+    BLANK desktop --release v0.1.2 --install
+    ```
+  </Tab>
+</Tabs>
+
+## Update BlankDrive
+
+### Check for Updates
+
+```bash
+BLANK update --check
+```
+
+This checks for new releases and shows update availability.
+
+### Install Latest Update
+
+```bash
+BLANK update --install
+```
+
+<Info>
+  The self-update flow was added in v0.1.2. Updates are pulled directly from npm registry.
+</Info>
+
+### Enable Automatic Update Check
+
+```bash
+BLANK update --scheduled
+```
+
+## Verify Installation
+
+<Steps>
+  <Step title="Check Version">
+    ```bash
+    BLANK version
+    ```
+    Expected output: `BlankDrive v0.1.2`
+  </Step>
+
+  <Step title="View Help">
+    ```bash
+    BLANK --help
+    ```
+    Shows all available commands and options.
+  </Step>
+
+  <Step title="Test Interactive Shell">
+    ```bash
+    BLANK
+    ```
+    Launches the interactive shell (exit with `exit` or Ctrl+C).
+  </Step>
+</Steps>
+
+## Google Cloud Setup
+
+BlankDrive requires your own Google OAuth credentials to connect to Drive. Follow these steps:
+
+<Steps>
+  <Step title="Create Google Cloud Project">
+    Visit [Google Cloud Console](https://console.cloud.google.com/) and create a new project (or select existing).
+  </Step>
+
+  <Step title="Enable Google Drive API">
+    Navigate to [Drive API Library](https://console.cloud.google.com/apis/library/drive.googleapis.com) and click **Enable**.
+  </Step>
+
+  <Step title="Configure OAuth Consent Screen">
+    Go to [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent):
+    - Choose **External** (or **Internal** for Workspace)
+    - Add your email and app name
+    - Add test users if app is not published
+
+    <Warning>
+      If you see "Access blocked: This app is not verified", add your Google account as a test user in the OAuth consent screen.
+    </Warning>
+  </Step>
+
+  <Step title="Create OAuth Client ID">
+    Go to [Credentials](https://console.cloud.google.com/apis/credentials):
+    - Click **Create Credentials** → **OAuth client ID**
+    - Select **Desktop app** (NOT Web application)
+    - Download or copy Client ID and Client Secret
+
+    <Note>
+      BlankDrive uses local loopback OAuth flow (`http://127.0.0.1:<port>`), which requires Desktop app type.
+    </Note>
+  </Step>
+
+  <Step title="Save Credentials in BlankDrive">
+    You'll enter these credentials when running `BLANK auth` for the first time.
+  </Step>
+</Steps>
+
+## Common Installation Issues
+
+<AccordionGroup>
+  <Accordion title="Command not found: blankdrive">
+    **Solution:**
+    1. Ensure npm global bin is in your PATH:
+       ```bash
+       npm config get prefix
+       ```
+    2. Add to PATH:
+       - **Linux/Mac**: Add to `~/.bashrc` or `~/.zshrc`:
+         ```bash
+         export PATH="$(npm config get prefix)/bin:$PATH"
+         ```
+       - **Windows**: Add npm global folder to system PATH
+    3. Restart terminal and try again
+  </Accordion>
+
+  <Accordion title="Permission denied on npm install -g">
+    **Solution:**
+    - **Option 1** (Recommended): Use nvm (Node Version Manager)
+      ```bash
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+      nvm install 22
+      npm install -g blankdrive
+      ```
+    - **Option 2**: Fix npm permissions:
+      ```bash
+      mkdir -p ~/.npm-global
+      npm config set prefix '~/.npm-global'
+      export PATH=~/.npm-global/bin:$PATH
+      npm install -g blankdrive
+      ```
+  </Accordion>
+
+  <Accordion title="Node.js version too old">
+    **Solution:**
+    BlankDrive requires Node.js 18+. Update Node:
+    - **Using nvm**:
+      ```bash
+      nvm install 22
+      nvm use 22
+      ```
+    - **Direct download**: Visit [nodejs.org](https://nodejs.org)
+  </Accordion>
+
+  <Accordion title="Desktop app won't launch">
+    **Solution:**
+    1. Ensure CLI is installed first:
+       ```bash
+       npm install -g blankdrive
+       ```
+    2. Reinstall desktop app:
+       ```bash
+       BLANK desktop --install
+       ```
+    3. Check logs in `~/.slasshy/` for errors
+  </Accordion>
+</AccordionGroup>
+
+## Uninstall BlankDrive
+
+### Remove CLI
+
+```bash
+npm uninstall -g blankdrive
+```
+
+### Delete Vault Data
+
+<Warning>
+  This permanently deletes all local vault data. Ensure you have a backup in Google Drive.
+</Warning>
+
+```bash
+# Linux/Mac
+rm -rf ~/.slasshy
+
+# Windows PowerShell
+Remove-Item -Recurse -Force ~/.slasshy
+```
+
+### Remove from Google Drive
+
+Encrypted files remain in your Google Drive. To remove:
+
+<Tabs>
+  <Tab title="Public Mode">
+    1. Go to [Google Drive](https://drive.google.com)
+    2. Find the `BlankDrive/` folder
+    3. Delete the folder
+  </Tab>
+
+  <Tab title="Hidden Mode">
+    Hidden files in `appDataFolder` can only be deleted programmatically or by revoking app access:
+    1. Visit [Google Account Permissions](https://myaccount.google.com/permissions)
+    2. Find BlankDrive app
+    3. Click **Remove Access**
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+  Initialize your vault and start storing encrypted data
+</Card>

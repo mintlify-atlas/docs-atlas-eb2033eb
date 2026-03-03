@@ -1,0 +1,345 @@
+---
+title: "update"
+description: "Check for and install BlankDrive CLI updates from npm"
+---
+
+Check for CLI updates from npm and optionally install the latest version with automatic restart.
+
+## Usage
+
+```bash
+BLANK update [options]
+```
+
+## Overview
+
+The `update` command manages BlankDrive CLI updates from the npm registry. It can:
+
+- Check if a newer version is available on npm
+- Install the latest version globally via `npm install -g`
+- Automatically restart the CLI with the updated version
+- Track when the last update check occurred (24-hour interval for scheduled checks)
+
+**Package name**: `blankdrive`
+
+**Auto-check behavior**: When you run any BlankDrive command (except `update`, `desktop`, `version`, or `help`), the CLI automatically checks for updates every 24 hours and prompts you to install them.
+
+## Options
+
+<ParamField path="--check" type="boolean">
+  Check for updates only, without installing
+  
+  Displays whether an update is available and the version information, but does not prompt for installation.
+  
+  Shorthand: `-c`
+</ParamField>
+
+<ParamField path="--install" type="boolean">
+  Install the latest version without prompting
+  
+  Skips the interactive confirmation and immediately installs the update. Restarts automatically unless running in non-interactive mode.
+  
+  Shorthand: `-i`
+</ParamField>
+
+<ParamField path="--yes" type="boolean">
+  Non-interactive mode - skip prompts and restart
+  
+  When combined with update installation, the CLI will install but **not** restart automatically. Useful for automation and CI environments.
+  
+  Shorthand: `-y`
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  Output machine-readable JSON instead of human-friendly text
+  
+  Useful for scripts and automation. Suppresses all visual output and returns structured data.
+</ParamField>
+
+<ParamField path="--scheduled" type="boolean">
+  Respect the 24-hour update check interval
+  
+  Skips the check if one was performed in the last 24 hours. The state file is stored at `~/.slasshy/cli-update-check.json`.
+</ParamField>
+
+<ParamField path="--current-version" type="string">
+  Override the current version used for comparison
+  
+  Primarily used for testing. By default, the CLI reads its version from `package.json`.
+</ParamField>
+
+<ParamField path="--release" type="string">
+  Reserved for future use (currently unused)
+  
+  Shorthand: `-r`
+</ParamField>
+
+<ParamField path="--version" type="string">
+  Reserved for future use (currently unused)
+</ParamField>
+
+<ParamField path="--asset" type="string">
+  Reserved for future use (currently unused)
+  
+  Shorthand: `-a`
+</ParamField>
+
+<ParamField path="--output" type="string">
+  Reserved for future use (currently unused)
+  
+  Shorthand: `-o`
+</ParamField>
+
+<ParamField path="--force" type="boolean">
+  Reserved for future use (currently unused)
+  
+  Shorthand: `-f`
+</ParamField>
+
+## Examples
+
+### Check for Updates
+
+Check if a newer version is available:
+
+```bash
+BLANK update --check
+```
+
+**If update available:**
+```
+  BlankDrive CLI Update (npm)
+
+  Update available: 1.2.0
+  Current version: 1.1.5
+  Source: npm package "blankdrive"
+
+  Run "BLANK update --install" to install and restart.
+```
+
+**If up to date:**
+```
+  BlankDrive CLI Update (npm)
+
+  ✓ You are up to date (1.2.0).
+```
+
+### Install Update (Interactive)
+
+Prompt to install the update:
+
+```bash
+BLANK update
+```
+
+```
+  BlankDrive CLI Update (npm)
+
+  Update available: 1.3.0
+  Current version: 1.2.0
+  Source: npm package "blankdrive"
+
+  ? Download and install now? (Y/n)
+```
+
+After confirming:
+```
+  [npm install output...]
+
+  ✓ CLI update installed.
+  Restarting BlankDrive...
+```
+
+### Install Update (Non-Interactive)
+
+Install without prompting:
+
+```bash
+BLANK update --install
+```
+
+or
+
+```bash
+BLANK update -i
+```
+
+### Install in CI/Automation
+
+Install updates in scripts without restart:
+
+```bash
+BLANK update --yes --install
+```
+
+```
+  BlankDrive CLI Update (npm)
+
+  Update available: 1.3.0
+  Current version: 1.2.0
+  Source: npm package "blankdrive"
+
+  [npm install output...]
+
+  ✓ CLI update installed.
+  Restart skipped in non-interactive mode.
+  Run BLANK again to use the updated version.
+```
+
+### JSON Output
+
+Get machine-readable update information:
+
+```bash
+BLANK update --json
+```
+
+**Response when update available:**
+```json
+{
+  "currentVersion": "1.2.0",
+  "latestVersion": "1.3.0",
+  "updateAvailable": true,
+  "checked": true,
+  "skipped": false,
+  "scheduled": false,
+  "channel": "npm",
+  "packageName": "blankdrive"
+}
+```
+
+**Response when up to date:**
+```json
+{
+  "currentVersion": "1.3.0",
+  "latestVersion": "1.3.0",
+  "updateAvailable": false,
+  "checked": true,
+  "skipped": false,
+  "scheduled": false,
+  "channel": "npm",
+  "packageName": "blankdrive"
+}
+```
+
+### Scheduled Check
+
+Respect the 24-hour interval:
+
+```bash
+BLANK update --scheduled
+```
+
+**If checked recently:**
+```
+  BlankDrive CLI Update (npm)
+
+  Next check after 2026-03-04T14:30:00.000Z
+```
+
+### With JSON + Install
+
+<CodeGroup>
+```bash Check Only
+BLANK update --check --json
+```
+
+```bash Install + JSON
+BLANK update --install --json
+```
+
+```bash CI Pipeline
+BLANK update -y -i --json
+```
+</CodeGroup>
+
+## Auto-Update Prompt
+
+When you run the CLI (except for update-related commands), it checks for updates every 24 hours and prompts:
+
+```
+  Update available: 1.3.0 (current 1.2.0)
+  Install latest BlankDrive CLI from npm and restart now?
+
+  ? Install and restart now? (y/N)
+```
+
+If you confirm:
+- The CLI installs the update via npm
+- Restarts automatically with the new version
+- Your original command is re-executed
+
+## Update Check Interval
+
+The CLI tracks update checks in `~/.slasshy/cli-update-check.json`:
+
+```json
+{
+  "lastCheckedAt": "2026-03-03T12:00:00.000Z"
+}
+```
+
+- **Interval**: 24 hours (86400000 ms)
+- **Behavior**: Only affects `--scheduled` checks and auto-prompts
+- **Manual checks**: `BLANK update --check` always runs immediately
+
+## Version Comparison
+
+The command compares versions numerically:
+
+- `1.2.0` < `1.2.1`
+- `1.9.0` < `1.10.0`
+- `2.0.0` > `1.99.99`
+
+Pre-release tags (e.g., `-beta.1`) are ignored in comparison.
+
+## Installation Process
+
+When installing updates:
+
+1. Runs `npm install -g blankdrive@latest`
+2. Shows npm output (unless `--json` is used)
+3. Detects when installation completes
+4. Restarts the CLI process (unless `--yes` is used)
+
+**Platform-specific npm command:**
+- Windows: `npm.cmd`
+- Unix/Linux/macOS: `npm`
+
+## Error Handling
+
+**Update check failed:**
+```
+  BlankDrive CLI Update (npm)
+
+  Update check failed: npm registry request timed out.
+  Tip: run "BLANK update --check" again later.
+```
+
+**npm install failed:**
+```
+  ✗ Failed to install update.
+  npm install exited with code 1.
+```
+
+**No internet connection:**
+```
+  BlankDrive CLI Update (npm)
+
+  Update check failed: getaddrinfo ENOTFOUND registry.npmjs.org
+  Tip: run "BLANK update --check" again later.
+```
+
+## State File Location
+
+```
+~/.slasshy/cli-update-check.json
+```
+
+Stores the timestamp of the last update check for scheduled check logic.
+
+## Related Commands
+
+- [desktop](/commands/desktop) - Download the desktop application
+- [version](/commands/version) - Show current CLI version
+- [web](/commands/web) - Launch web interface

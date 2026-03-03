@@ -1,0 +1,247 @@
+---
+title: "upload"
+description: "Upload files to your encrypted vault with drag-and-drop support"
+icon: "cloud-arrow-up"
+---
+
+## Overview
+
+The `upload` command encrypts and stores files in your vault, with automatic cloud sync to Google Drive. It supports drag-and-drop, file picker dialogs, and shows real-time progress during encryption and upload.
+
+<Note>
+Files are encrypted locally before uploading. You can choose between **hidden mode** (appDataFolder) or **visible mode** (BlankDrive/folder).
+</Note>
+
+## Usage
+
+```bash
+BLANK upload [file]
+```
+
+**Alias:** `up`
+
+## Arguments
+
+<ParamField path="file" type="string" optional>
+  Path to the file you want to upload. If omitted, you'll be prompted interactively.
+</ParamField>
+
+## Interactive Features
+
+### File Selection Methods
+
+1. **Command line argument**: `BLANK upload /path/to/file.pdf`
+2. **Drag and drop**: Type `BLANK upload` and drag a file into the terminal
+3. **File picker**: Type `browse` or `select` when prompted (Windows only)
+4. **Manual path entry**: Paste or type the file path when prompted
+
+<Tip>
+Drag-and-drop automatically handles paths with spaces and special characters.
+</Tip>
+
+### Cloud Storage Configuration
+
+On first upload, you'll be prompted to configure cloud storage mode:
+
+- **Hidden mode**: Files stored in Google Drive's `appDataFolder` (invisible in Drive UI)
+- **Visible mode**: Files stored under `BlankDrive/<folder-name>/` (visible in Drive UI)
+
+You can switch between modes during any upload operation.
+
+## Examples
+
+### Basic Upload
+
+```bash
+BLANK upload document.pdf
+```
+
+```
+  Upload File to Vault
+
+  File: document.pdf
+  Size: 2.3 MB
+
+  Title (optional): [document.pdf]
+  Notes (optional): Important contract
+
+  Encrypting and storing file...
+
+  Encrypting [████████████████████] 100%
+
+  ✓ File encrypted successfully!
+
+  Uploading to cloud...
+
+  Uploading [████████████████████] 100%
+
+  ✓ Uploaded to cloud!
+  Cloud location: Google Drive > BlankDrive/vault-data/
+
+  File Details:
+  Title: document.pdf
+  Original name: document.pdf
+  Size: 2.3 MB
+  Type: application/pdf
+```
+
+### Upload with Alias
+
+```bash
+BLANK up photo.jpg
+```
+
+### Interactive Upload with File Picker
+
+```bash
+BLANK upload
+```
+
+```
+  Tip: Type "browse" to open file picker, or drag & drop a file
+
+  File path: browse
+
+  Opening file picker...
+  Selected: C:\Users\username\Documents\report.docx
+
+  File: report.docx
+  Size: 145.2 KB
+
+  Title (optional): [report.docx]
+  Q4 Financial Report
+
+  Notes (optional):
+  Final version for board meeting
+```
+
+### Drag and Drop Upload
+
+```bash
+BLANK upload
+```
+
+Then drag a file into the terminal:
+
+```
+  File path: "C:\Users\username\Desktop\photo.png"
+
+  File: photo.png
+  Size: 5.7 MB
+```
+
+## File Size Warnings
+
+<Warning>
+Files larger than 100 MB will show a warning about longer encryption and sync times, but can still be uploaded.
+</Warning>
+
+```bash
+BLANK upload large-video.mp4
+```
+
+```
+  File: large-video.mp4
+  Size: 256.8 MB
+
+  Warning: Large files may take longer to encrypt and sync.
+```
+
+## Progress Tracking
+
+The upload process shows two progress bars:
+
+1. **Encryption progress**: Real-time progress as the file is encrypted locally
+2. **Upload progress**: Real-time progress as encrypted chunks are uploaded to Google Drive
+
+```
+Encrypting [████████████░░░░░░░░] 65% (1.5 MB / 2.3 MB)
+
+Uploading [███████████████░░░░░] 78% (1.8 MB / 2.3 MB)
+```
+
+## Cloud Storage Modes
+
+### Hidden Mode (appDataFolder)
+
+- Files are **not visible** in Google Drive UI
+- Stored in Google Drive's app-specific folder
+- Only accessible through BlankDrive CLI
+- Ideal for maximum privacy
+
+```
+Upload target: Hidden appDataFolder (not visible in Drive UI)
+```
+
+### Visible Mode (BlankDrive/folder)
+
+- Files are **visible** in Google Drive UI under `BlankDrive/<folder-name>/`
+- You can browse encrypted chunks in Drive (but cannot decrypt without the CLI)
+- Useful for backup verification
+- Custom folder names supported
+
+```
+Upload target: BlankDrive/vault-data/
+```
+
+## Authentication
+
+The upload command automatically handles authentication:
+
+1. **Vault unlock**: Prompts for master password if vault is locked
+2. **Google Drive auth**: Prompts for OAuth authentication if not connected
+
+Both happen seamlessly before the upload begins.
+
+## Technical Details
+
+- Files are split into encrypted chunks for efficient storage and transfer
+- Each file is encrypted with AES-256-GCM
+- Chunk size is optimized based on file size
+- Original filename, size, and MIME type are preserved in metadata
+- Cloud sync happens immediately after local encryption
+
+## Error Handling
+
+### File Not Found
+
+```bash
+BLANK upload missing.txt
+```
+
+```
+  Error: File not found: missing.txt
+```
+
+### Path is a Directory
+
+```bash
+BLANK upload /path/to/folder
+```
+
+```
+  Error: Path is not a file.
+```
+
+### Cloud Upload Failure
+
+If encryption succeeds but cloud upload fails, the file remains stored locally:
+
+```
+  ✓ File encrypted successfully!
+
+  Uploading to cloud...
+
+  ✗ Cloud upload failed
+  Network error: connection timeout
+```
+
+You can retry syncing later with the `status` command.
+
+## Related Commands
+
+- [`download`](/commands/download) - Download files from the vault
+- [`list`](/commands/list) - View all uploaded files
+- [`status`](/commands/status) - Check cloud sync status
+- [`settings`](/commands/settings) - Change cloud storage mode
+

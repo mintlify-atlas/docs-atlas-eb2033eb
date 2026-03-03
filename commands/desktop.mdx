@@ -1,0 +1,272 @@
+---
+title: "desktop"
+description: "Download BlankDrive desktop installer from GitHub releases"
+---
+
+Download the latest or a specific version of the BlankDrive desktop application installer (.exe) from GitHub releases.
+
+## Usage
+
+```bash
+BLANK desktop [options]
+```
+
+## Overview
+
+The `desktop` command fetches Windows installer executables from the [SlasshyOverhere/BlankDrive](https://github.com/SlasshyOverhere/BlankDrive) GitHub repository. It automatically:
+
+- Detects your system architecture (x64, arm64, ia32)
+- Selects the most appropriate installer asset
+- Downloads with progress tracking
+- Optionally launches the installer after download
+
+**Default behavior:**
+- Downloads the latest release
+- Saves to `~/Downloads/[asset-name].exe`
+- Prompts before overwriting existing files
+
+## Options
+
+<ParamField path="--release" type="string">
+  Specific GitHub release tag to download
+  
+  Can be specified with or without the `v` prefix:
+  - `--release v1.2.3`
+  - `--release 1.2.3`
+  
+  Both formats are normalized automatically.
+  
+  Shorthand: `-r`
+</ParamField>
+
+<ParamField path="--version" type="string">
+  Alias for `--release`
+  
+  Accepts the same format as `--release`.
+</ParamField>
+
+<ParamField path="--output" type="string">
+  Output file path or destination directory
+  
+  Behavior:
+  - If a directory (existing or ending with `/`), saves asset there with original name
+  - If a file path with `.exe` extension, uses that exact path
+  - If path doesn't exist and has no extension, treated as directory
+  - Default: `~/Downloads/[asset-name].exe`
+  
+  Shorthand: `-o`
+</ParamField>
+
+<ParamField path="--asset" type="string">
+  Specific .exe asset name or pattern to download
+  
+  The command searches for:
+  1. Exact match (case-insensitive)
+  2. Partial match (contains the specified string)
+  
+  Useful when a release has multiple .exe files.
+  
+  Shorthand: `-a`
+</ParamField>
+
+<ParamField path="--force" type="boolean">
+  Overwrite existing output file without prompting
+  
+  Without this flag, the command prompts for confirmation if the output file already exists (in interactive mode) or fails (in non-interactive mode).
+  
+  Shorthand: `-f`
+</ParamField>
+
+<ParamField path="--install" type="boolean">
+  Automatically launch the installer after download completes
+  
+  The installer runs in detached mode, allowing the CLI to exit while the installer continues.
+  
+  Shorthand: `-i`
+</ParamField>
+
+<ParamField path="--yes" type="boolean">
+  Non-interactive mode - skip all prompts
+  
+  Use `--force` with `--yes` to overwrite files without confirmation.
+  
+  Shorthand: `-y`
+</ParamField>
+
+## Examples
+
+### Download Latest Release
+
+Download the latest desktop installer:
+
+```bash
+BLANK desktop
+```
+
+```
+  Download BlankDrive Desktop
+
+  Fetching release metadata...
+
+  Release: v1.0.0
+  Asset:   BlankDrive-Setup-x64.exe
+  Size:    85.3 MB
+  Output:  /home/user/Downloads/BlankDrive-Setup-x64.exe
+
+  Downloading ████████████████████ 100% | 85.3 MB/85.3 MB | 2.1 MB/s
+
+  ✓ Desktop executable downloaded successfully!
+  Saved to: /home/user/Downloads/BlankDrive-Setup-x64.exe
+  Run the installer to launch BlankDrive Desktop.
+```
+
+### Download and Install
+
+Download and automatically launch the installer:
+
+```bash
+BLANK desktop --install
+```
+
+```
+  ✓ Desktop executable downloaded successfully!
+  Saved to: /home/user/Downloads/BlankDrive-Setup-x64.exe
+  ✓ Installer launched.
+```
+
+### Download Specific Version
+
+Download a specific release version:
+
+```bash
+BLANK desktop --version 1.2.3
+```
+
+or
+
+```bash
+BLANK desktop -r v1.2.3
+```
+
+### Custom Output Location
+
+Save to a specific directory:
+
+```bash
+BLANK desktop --output ~/installers/
+```
+
+Save with a custom filename:
+
+```bash
+BLANK desktop -o ~/Desktop/BlankDrive.exe
+```
+
+### Select Specific Asset
+
+Download a specific asset when multiple .exe files exist:
+
+```bash
+BLANK desktop --asset "arm64"
+```
+
+### Force Overwrite
+
+Overwrite existing file without prompting:
+
+```bash
+BLANK desktop --force --output ~/Downloads/BlankDrive-Setup.exe
+```
+
+### Combined Options
+
+<CodeGroup>
+```bash Download and Install
+# Get latest, force overwrite, auto-install
+BLANK desktop -f -i
+```
+
+```bash Specific Version + Custom Path
+# Download v1.5.0 to Desktop and install
+BLANK desktop -r 1.5.0 -o ~/Desktop/ -i
+```
+
+```bash Non-Interactive
+# Download in CI/automation scripts
+BLANK desktop -y -f -o ./build/installer.exe
+```
+</CodeGroup>
+
+## Asset Selection Logic
+
+The command automatically selects the best installer using this priority:
+
+1. **User-specified asset** (via `--asset`)
+2. **Architecture match**: Filters by your system architecture
+   - `x64` → looks for `x64`, `amd64`
+   - `arm64` → looks for `arm64`, `aarch64`
+   - `ia32` → looks for `x86`, `ia32`, `i386`
+3. **Setup preference**: Prefers assets with "setup" in the name
+4. **First match**: Falls back to the first .exe asset
+
+## Error Messages
+
+**No .exe assets found:**
+```
+  ✗ Failed to download desktop executable.
+  No .exe asset found in this release.
+```
+
+**Asset not found:**
+```
+  ✗ Failed to download desktop executable.
+  No .exe asset matching "arm64" found.
+```
+
+**File already exists (non-interactive):**
+```
+  ✗ Failed to download desktop executable.
+  Output file already exists: /path/to/file.exe. Use --force to overwrite.
+```
+
+**GitHub API rate limit:**
+```
+  ✗ Failed to download desktop executable.
+  API rate limit exceeded.
+  Tip: set GITHUB_TOKEN to avoid anonymous GitHub API limits.
+```
+
+**Release not found:**
+```
+  ✗ Failed to download desktop executable.
+  Release "v99.99.99" not found.
+```
+
+## Environment Variables
+
+<ParamField path="GITHUB_TOKEN" type="string">
+  GitHub personal access token for authenticated API requests
+  
+  Recommended when downloading frequently to avoid rate limits. Set it in your environment:
+  
+  ```bash
+  export GITHUB_TOKEN="ghp_your_token_here"
+  ```
+  
+  The token increases your rate limit from 60 to 5000 requests per hour.
+</ParamField>
+
+## Platform Support
+
+The command works on all platforms but downloads **Windows .exe installers only**. 
+
+Installer launching (`--install`) is supported on:
+- Windows (uses `cmd /c start`)
+- macOS (uses `open`)
+- Linux (uses `xdg-open`)
+
+## Related Commands
+
+- [update](/commands/update) - Update the CLI itself from npm
+- [web](/commands/web) - Launch the web interface
+- [version](/commands/version) - Show current CLI version

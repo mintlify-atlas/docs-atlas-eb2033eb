@@ -1,0 +1,665 @@
+---
+title: Architecture
+description: Technical deep dive into BlankDrive's client-side encryption, key derivation, and Google Drive sync
+---
+
+## Overview
+
+BlankDrive implements a **zero-knowledge, client-side architecture** where all cryptographic operations happen on your device. This page explains the technical implementation based on the actual source code.
+
+<Info>
+  **Design Philosophy**: BlankDrive never sends plaintext data to the cloud. Encryption happens before upload, and decryption happens after download.
+</Info>
+
+## Client-Only Architecture
+
+BlankDrive is fully client-side with no backend server:
+
+<CardGroup cols={2}>
+  <Card title="No Backend Server" icon="server">
+    No project-hosted authentication server or token broker. Everything runs on your machine.
+  </Card>
+  <Card title="Direct OAuth" icon="google">
+    OAuth runs locally with Google directly using loopback callback + PKCE.
+  </Card>
+  <Card title="Local Storage" icon="hard-drive">
+    Vault stored at `~/.slasshy/` with file-based encrypted storage.
+  </Card>
+  <Card title="Your Cloud" icon="cloud">
+    Encrypted blobs uploaded to YOUR Google Drive account (not a shared backend).
+  </Card>
+</CardGroup>
+
+## Cryptography Stack
+
+### Encryption Algorithm
+
+BlankDrive uses **AES-256-GCM** for authenticated encryption:
+
+```typescript
+// src/crypto/encryption.ts
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12;  // 12-byte IV for GCM
+const AUTH_TAG_LENGTH = 16;  // 16-byte authentication tag
+
+export function encrypt(
+  plaintext: Buffer,
+  key: Buffer,
+  aad?: Buffer
+): EncryptedData {
+  const iv = generateIV();  // Cryptographically random 12-byte IV
+
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
+
+  if (aad) {
+    cipher.setAAD(aad);  // Additional Authenticated Data
+  }
+
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintext),
+    cipher.final(),
+  ]);
+
+  const authTag = cipher.getAuthTag();
+
+  return { iv, ciphertext, authTag };
+}
+```
+
+**Why AES-256-GCM?**
+- **Authenticated encryption**: Prevents tampering with ciphertext
+- **AEAD mode**: Combines confidentiality and authenticity
+- **Performance**: Hardware-accelerated on modern CPUs
+- **Standard**: NIST-approved, widely audited
+
+### Key Derivation Function (KDF)
+
+BlankDrive uses **Argon2id** for deriving encryption keys from your master password:
+
+```typescript
+// src/crypto/kdf.ts
+import argon2 from 'argon2';
+
+const DEFAULT_KDF_PARAMS = {
+  timeCost: 3,
+  memoryCost: 65536,  // 64 MB
+  parallelism: 4,
+  hashLength: 32,  // 256-bit key
+};
+
+export async function deriveKey(
+  password: string,
+  salt: Buffer,
+  params: KdfParams = DEFAULT_KDF_PARAMS
+): Promise<Buffer> {
+  const hash = await argon2.hash(password, {
+    type: argon2.argon2id,
+    salt,
+    timeCost: params.timeCost,
+    memoryCost: params.memoryCost,
+    parallelism: params.parallelism,
+    hashLength: params.hashLength,
+    raw: true,  // Return raw bytes, not encoded string
+  });
+
+  return hash;
+}
+```
+
+**Why Argon2id?**
+- **Memory-hard**: Resistant to GPU/ASIC attacks
+- **Time-cost tunable**: Adjustable difficulty
+- **Hybrid mode**: Combines Argon2i (side-channel resistant) and Argon2d (GPU resistant)
+- **Modern standard**: Winner of Password Hashing Competition (PHC)
+
+<Note>
+  Argon2id parameters are tuned for ~500ms derivation time on modern hardware, balancing security and UX.
+</Note>
+
+### Sub-Key Derivation
+
+From the master key, BlankDrive derives **three specialized sub-keys** using HKDF-SHA256:
+
+```typescript
+// src/crypto/kdf.ts
+export function deriveSubKey(
+  masterKey: Buffer,
+  context: string,
+  length: number = 32
+): Buffer {
+  const derived = crypto.hkdfSync(
+    'sha256',
+    masterKey,
+    Buffer.alloc(0),  // No additional salt (already salted via Argon2)
+    Buffer.from(context, 'utf-8'),  // Context string for domain separation
+    length
+  );
+  return Buffer.from(derived);
+}
+
+export async function deriveAllKeys(
+  password: string,
+  salt?: Buffer
+): Promise<{ keys: DerivedKeys; salt: Buffer }> {
+  const actualSalt = salt || generateSalt(32);
+  const masterKey = await deriveKey(password, actualSalt);
+
+  const keys: DerivedKeys = {
+    masterKey,
+    indexKey: deriveSubKey(masterKey, 'slasshy-index-key'),      // For vault index
+    entryKey: deriveSubKey(masterKey, 'slasshy-entry-key'),      // For entry data
+    metadataKey: deriveSubKey(masterKey, 'slasshy-metadata-key'), // For OAuth tokens
+  };
+
+  return { keys, salt: actualSalt };
+}
+```
+
+**Key Hierarchy:**
+```
+Master Password
+      |
+      v
+  Argon2id (with 32-byte random salt)
+      |
+      v
+  Master Key (256-bit)
+      |
+      +-- HKDF("slasshy-index-key")    → Index Key
+      +-- HKDF("slasshy-entry-key")    → Entry Key
+      +-- HKDF("slasshy-metadata-key") → Metadata Key
+```
+
+**Domain Separation:**
+- **Index Key**: Encrypts vault index (`vault.enc`)
+- **Entry Key**: Encrypts individual password entries
+- **Metadata Key**: Encrypts OAuth tokens and credentials
+
+## Vault Storage Structure
+
+### File System Layout
+
+```
+~/.slasshy/
+├── vault.enc                          # Encrypted vault index
+├── drive_token.enc                    # Encrypted OAuth tokens
+├── google_oauth_credentials.enc       # Encrypted OAuth credentials
+├── cloud_storage_config.json          # Storage mode config (plaintext)
+├── config.json                        # Vault settings (plaintext)
+├── carriers/                          # Steganography carrier images
+└── [various audit/log files]
+```
+
+<Warning>
+  The `~/.slasshy/` directory contains highly sensitive encrypted data. Ensure proper file system permissions (0700).
+</Warning>
+
+### Vault Index Structure
+
+The vault index (`vault.enc`) is encrypted with the **Index Key**:
+
+```typescript
+// src/storage/vault/schema.ts
+export interface VaultIndex {
+  version: string;                     // Schema version
+  salt: string;                        // Base64-encoded salt for KDF
+  keyHash: string;                     // SHA-256 hash of master key (for verification)
+  entries: Record<string, IndexEntry>; // Map of entry ID → metadata
+  metadata: {
+    created: number;                   // Timestamp
+    lastSync: number | null;           // Last sync timestamp
+    entryCount: number;                // Total entries
+  };
+}
+
+export interface IndexEntry {
+  id: string;                          // UUID v4
+  title: string;                       // Entry title (stored encrypted)
+  type: 'password' | 'note' | 'file';  // Entry type
+  favorite: boolean;                   // Favorite flag
+  category?: string;                   // Optional category
+  created: number;                     // Creation timestamp
+  modified: number;                    // Last modified timestamp
+  cloudFileId?: string;                // Google Drive file ID
+}
+```
+
+### Entry Encryption
+
+Each entry is encrypted **separately** with the **Entry Key** + **AAD binding**:
+
+```typescript
+// src/storage/vault/vaultManager.ts
+export async function addEntry(
+  title: string,
+  data: {
+    username?: string;
+    password?: string;
+    url?: string;
+    notes?: string;
+  }
+): Promise<Entry> {
+  const entry: Entry = {
+    id: generateUUID(),
+    title,
+    username: data.username || '',
+    password: data.password || '',
+    url: data.url || '',
+    notes: data.notes || '',
+    created: Date.now(),
+    modified: Date.now(),
+  };
+
+  const entryKey = getEntryKey();
+  const aad = Buffer.from(entry.id, 'utf-8');  // AAD binds to entry ID
+
+  const encryptedData = encryptObject(entry, entryKey, aad.toString('utf-8'));
+
+  // Store encrypted entry...
+  return entry;
+}
+```
+
+**AAD (Additional Authenticated Data):**
+- Binds ciphertext to entry ID
+- Prevents swapping encrypted entries
+- Detects tampering or corruption
+
+## Google Drive Integration
+
+### OAuth Flow Architecture
+
+BlankDrive uses **OAuth 2.0 for Native Apps** with PKCE:
+
+<Steps>
+  <Step title="Generate PKCE Challenge">
+    ```typescript
+    // src/storage/drive/driveClient.ts
+    function generateCodeVerifier(): string {
+      return toBase64Url(crypto.randomBytes(64));
+    }
+
+    function generateCodeChallenge(codeVerifier: string): string {
+      return toBase64Url(
+        crypto.createHash('sha256').update(codeVerifier).digest()
+      );
+    }
+    ```
+  </Step>
+
+  <Step title="Start Local Callback Server">
+    ```typescript
+    const server = http.createServer(async (req, res) => {
+      // Handle OAuth callback on http://127.0.0.1:<random-port>/
+    });
+
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      const redirectUri = `http://127.0.0.1:${port}${OAUTH_CALLBACK_PATH}`;
+      // Open browser with Google consent URL...
+    });
+    ```
+  </Step>
+
+  <Step title="Open Browser for Consent">
+    User authenticates with Google and grants permissions:
+    - `drive.file`: Access to files created by BlankDrive
+    - `drive.appdata`: Access to appDataFolder (hidden storage)
+  </Step>
+
+  <Step title="Exchange Code for Tokens">
+    ```typescript
+    const { tokens } = await oauth2Client.getToken({
+      code: authorizationCode,
+      codeVerifier: pkceVerifier,
+    });
+
+    // tokens.access_token
+    // tokens.refresh_token
+    // tokens.expiry_date
+    ```
+  </Step>
+
+  <Step title="Encrypt and Store Tokens">
+    ```typescript
+    const metadataKey = getMetadataKey();
+    const encryptedTokens = encryptToPayload(
+      JSON.stringify(tokens),
+      metadataKey
+    );
+
+    await fs.writeFile(
+      TOKEN_PATH,
+      encryptedTokens,
+      { encoding: 'utf-8', mode: 0o600 }
+    );
+    ```
+  </Step>
+</Steps>
+
+<Info>
+  **Why PKCE?**: Proof Key for Code Exchange prevents authorization code interception attacks, critical for native apps without client secrets.
+</Info>
+
+### Cloud Storage Modes
+
+BlankDrive supports two storage modes:
+
+<Tabs>
+  <Tab title="Public Mode">
+    ### Public Mode
+
+    Files stored in visible Google Drive folder:
+
+    ```
+    Google Drive
+    └── BlankDrive/
+        └── <your-folder-name>/
+            ├── slasshy_vault_index_backup.enc
+            ├── <entry-id>_chunk_0.enc
+            ├── <entry-id>_chunk_1.enc
+            └── ...
+    ```
+
+    **Pros:**
+    - Visible in Drive web UI
+    - Easy to manage and delete
+    - Can share folder (advanced users)
+
+    **Cons:**
+    - Filenames reveal entry IDs
+    - Visible in Drive search
+  </Tab>
+
+  <Tab title="Hidden Mode">
+    ### Hidden Mode
+
+    Files stored in `appDataFolder` (not visible in Drive UI):
+
+    ```
+    appDataFolder/
+    ├── slasshy_vault_index_backup.enc
+    ├── <entry-id>_chunk_0.enc
+    └── ...
+    ```
+
+    **Pros:**
+    - Hidden from Drive UI
+    - Not searchable by user
+    - More privacy
+
+    **Cons:**
+    - Cannot view/manage via Drive web
+    - Deletion requires API or revoke app access
+    - Harder to debug
+
+    <Note>
+      `appDataFolder` is a special Google Drive folder only accessible via API. It's tied to the OAuth app and deleted when app access is revoked.
+    </Note>
+  </Tab>
+</Tabs>
+
+### File Upload Pipeline
+
+<Steps>
+  <Step title="Verify Vault Unlocked">
+    Check that vault keys are loaded in memory.
+  </Step>
+
+  <Step title="Encrypt File">
+    ```typescript
+    const entryKey = getEntryKey();
+    const aad = Buffer.from(entryId, 'utf-8');
+    const encryptedData = encryptToBuffer(fileData, entryKey, aad.toString('utf-8'));
+    ```
+  </Step>
+
+  <Step title="Chunk Large Files">
+    Files larger than 20 MB are chunked:
+    ```typescript
+    const CHUNK_SIZE = 20 * 1024 * 1024;  // 20 MB
+
+    for (let i = 0; i < fileSize; i += CHUNK_SIZE) {
+      const chunk = encryptedData.slice(i, i + CHUNK_SIZE);
+      const chunkId = `${entryId}_chunk_${chunkIndex}`;
+      // Upload chunk...
+    }
+    ```
+  </Step>
+
+  <Step title="Upload to Google Drive">
+    Depending on storage mode:
+    - **Public**: Upload to `BlankDrive/<folder>/`
+    - **Hidden**: Upload to `appDataFolder`
+
+    ```typescript
+    const res = await drive.files.create({
+      requestBody: {
+        name: chunkId,
+        parents: [parentFolderId],  // or 'appDataFolder'
+      },
+      media: {
+        mimeType: 'application/octet-stream',
+        body: chunkStream,
+      },
+    });
+
+    const fileId = res.data.id;
+    ```
+  </Step>
+
+  <Step title="Update Vault Index">
+    Store metadata in encrypted vault index:
+    ```typescript
+    vaultIndex.entries[entryId] = {
+      id: entryId,
+      title: encryptedTitle,
+      type: 'file',
+      cloudFileId: fileId,
+      created: Date.now(),
+      modified: Date.now(),
+    };
+
+    await saveIndex();  // Encrypt and save vault.enc
+    ```
+  </Step>
+</Steps>
+
+### File Download Pipeline
+
+<Steps>
+  <Step title="Search Vault Index">
+    Fuzzy search for file by name (encrypted index is decrypted in memory).
+  </Step>
+
+  <Step title="List Cloud Chunks">
+    Query Google Drive API for all chunks matching entry ID:
+    ```typescript
+    const query = `name contains '${entryId}_chunk'`;
+    const res = await drive.files.list({ q: query });
+    const chunks = res.data.files;
+    ```
+  </Step>
+
+  <Step title="Download Chunks in Parallel">
+    Adaptive concurrency based on free RAM:
+    ```typescript
+    const freeMemoryGB = os.freemem() / (1024 ** 3);
+    const concurrency = freeMemoryGB > 2 ? 5 : (freeMemoryGB > 0.5 ? 2 : 1);
+
+    await Promise.all(
+      chunks.map(chunk => downloadChunk(chunk.id))
+    );
+    ```
+  </Step>
+
+  <Step title="Decrypt Locally">
+    ```typescript
+    const entryKey = getEntryKey();
+    const aad = Buffer.from(entryId, 'utf-8');
+    const decryptedChunk = decryptFromBuffer(encryptedChunk, entryKey, aad.toString('utf-8'));
+    ```
+  </Step>
+
+  <Step title="Write Restored File">
+    Combine chunks and write to disk:
+    ```typescript
+    const restoredFile = Buffer.concat(decryptedChunks);
+    await fs.writeFile(outputPath, restoredFile);
+    ```
+  </Step>
+</Steps>
+
+## Security Specifications
+
+### Cryptographic Primitives
+
+| Component | Algorithm | Parameters |
+|-----------|-----------|------------|
+| Encryption | AES-256-GCM | 12-byte IV, 16-byte tag |
+| KDF | Argon2id | time=3, memory=64MB, parallelism=4 |
+| Sub-key derivation | HKDF-SHA256 | Domain-separated contexts |
+| Random generation | `crypto.randomBytes()` | Node.js CSPRNG |
+| Password verification | Timing-safe compare | `crypto.timingSafeEqual()` |
+
+### Key Storage
+
+<CardGroup cols={2}>
+  <Card title="At Rest" icon="hard-drive">
+    - Keys never stored in plaintext
+    - Only encrypted vault and tokens on disk
+    - File permissions: 0600 (owner read/write only)
+  </Card>
+  <Card title="In Memory" icon="memory">
+    - Keys loaded only when vault unlocked
+    - Cleared on lock or exit
+    - No swap/core dumps (best effort)
+  </Card>
+</CardGroup>
+
+### Threat Model
+
+**What BlankDrive Protects Against:**
+- ✅ Cloud provider snooping (encrypted blobs)
+- ✅ Man-in-the-middle attacks (HTTPS + GCM auth)
+- ✅ Password reuse attacks (unique per-site passwords)
+- ✅ Offline brute force (Argon2id memory-hard KDF)
+
+**What BlankDrive Does NOT Protect Against:**
+- ❌ Compromised endpoint while vault unlocked (keyloggers, memory dumps)
+- ❌ Malicious BlankDrive binary (verify from trusted source)
+- ❌ Lost master password (no recovery by design)
+- ❌ Malware with root access
+
+<Warning>
+  **Endpoint Security**: BlankDrive assumes your machine is secure. Use full-disk encryption, antivirus, and keep OS updated.
+</Warning>
+
+## Performance Considerations
+
+### Argon2id Tuning
+
+Default parameters target ~500ms on modern hardware:
+
+```typescript
+// src/types/index.ts
+export const DEFAULT_KDF_PARAMS: KdfParams = {
+  timeCost: 3,           // 3 iterations
+  memoryCost: 65536,     // 64 MB memory
+  parallelism: 4,        // 4 threads
+  hashLength: 32,        // 256-bit output
+};
+```
+
+**Tuning Guidelines:**
+- **Fast unlock**: Reduce `memoryCost` to 32768 (32 MB)
+- **High security**: Increase `timeCost` to 5 and `memoryCost` to 131072 (128 MB)
+- **Low-memory devices**: Reduce `memoryCost`, increase `timeCost`
+
+### File Chunking
+
+```typescript
+const CHUNK_SIZE = 20 * 1024 * 1024;  // 20 MB per chunk
+```
+
+**Why 20 MB?**
+- Balances memory usage vs. HTTP overhead
+- Google Drive API has 5 MB minimum for resumable uploads
+- Allows parallel upload/download without OOM
+
+### Adaptive Download Concurrency
+
+```typescript
+const freeMemoryGB = os.freemem() / (1024 ** 3);
+const concurrency = freeMemoryGB > 2 ? 5 : (freeMemoryGB > 0.5 ? 2 : 1);
+```
+
+**Dynamic Workers:**
+- Five workers: Free RAM greater than 2 GB
+- Two workers: Free RAM greater than 512 MB
+- One worker: Low memory (less than 512 MB)
+
+## Trust Boundary
+
+### What You Trust
+
+<CardGroup cols={2}>
+  <Card title="Your Device" icon="laptop">
+    BlankDrive assumes your endpoint is secure and not compromised.
+  </Card>
+  <Card title="Node.js Crypto" icon="node-js">
+    Relies on Node.js built-in `crypto` module (OpenSSL/BoringSSL).
+  </Card>
+  <Card title="Google OAuth" icon="google">
+    Trusts Google's OAuth implementation and Drive API.
+  </Card>
+  <Card title="npm Packages" icon="cube">
+    Dependencies include `argon2`, `googleapis`, `inquirer`, etc.
+  </Card>
+</CardGroup>
+
+### What You Don't Trust
+
+<CardGroup cols={2}>
+  <Card title="Google Drive" icon="cloud">
+    BlankDrive encrypts before upload. Google sees only ciphertext.
+  </Card>
+  <Card title="Network" icon="network-wired">
+    All traffic is HTTPS. Drive API uses Google's TLS certificates.
+  </Card>
+  <Card title="BlankDrive Servers" icon="server">
+    There are none! No BlankDrive backend exists.
+  </Card>
+  <Card title="Third Parties" icon="users">
+    No analytics, telemetry, or external services called.
+  </Card>
+</CardGroup>
+
+## Source Code References
+
+Key implementation files:
+
+- **Encryption**: `src/crypto/encryption.ts:6`
+- **KDF**: `src/crypto/kdf.ts:11`
+- **Vault Manager**: `src/storage/vault/vaultManager.ts:82`
+- **Drive Client**: `src/storage/drive/driveClient.ts:107`
+- **OAuth Flow**: `src/storage/drive/driveClient.ts:200`
+- **Init Command**: `src/cli/commands/init.ts:51`
+- **Auth Command**: `src/cli/commands/auth.ts:70`
+
+<Tip>
+  BlankDrive is fully open source. Read the code on [GitHub](https://github.com/SlasshyOverhere/BlankDrive) to verify security claims.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Initialize your vault and start using BlankDrive
+  </Card>
+  <Card title="CLI Reference" icon="terminal">
+    Complete command reference (coming soon)
+  </Card>
+</CardGroup>

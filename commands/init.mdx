@@ -1,0 +1,181 @@
+---
+title: 'init'
+description: 'Initialize a new encrypted vault'
+---
+
+Initialize a new encrypted BlankDrive vault. This command creates a new vault with a master password and optionally configures Google Drive sync.
+
+## Usage
+
+```bash
+BLANK init [options]
+```
+
+## Options
+
+<ParamField path="--drive" type="boolean" default="false">
+  Set up Google Drive sync during initialization. If enabled, you'll be prompted to configure cloud storage mode and authentication after vault creation.
+</ParamField>
+
+<ParamField path="--restore" type="boolean" default="false">
+  Restore vault from cloud backup instead of creating a new one. Downloads and restores your encrypted vault from Google Drive.
+</ParamField>
+
+## Examples
+
+### Basic initialization
+
+Create a new vault with a master password:
+
+```bash
+BLANK init
+```
+
+<CodeGroup>
+```bash Output
+  BlankDrive Vault Initialization
+
+  Choose a strong master password. This is the only password you need to remember.
+  IMPORTANT: If you lose this password, your data cannot be recovered!
+
+  Master password: ********
+  Confirm password: ********
+
+✓ Encrypted vault created
+
+  Cloud storage mode saved: hidden
+  Encrypted cloud files will be hidden in appDataFolder.
+
+  Vault initialized successfully!
+
+  Quick start:
+    BLANK add      Add a new entry
+    BLANK list     List all entries
+    BLANK get      Retrieve an entry
+    BLANK auth     Connect to Google Drive
+    BLANK sync     Sync with Google Drive
+```
+</CodeGroup>
+
+### Initialize with Google Drive setup
+
+Create a vault and prompt for Google Drive configuration:
+
+```bash
+BLANK init --drive
+```
+
+This will guide you through:
+1. Setting a master password
+2. Choosing cloud storage mode (hidden or public)
+3. Configuring the public folder name (if using public mode)
+
+### Restore from cloud backup
+
+Restore your vault from a previous Google Drive backup:
+
+```bash
+BLANK init --restore
+```
+
+<CodeGroup>
+```bash Output
+  Restore Vault from Cloud
+
+  Cloud storage mode: hidden
+
+✓ Connected to Google Drive
+✓ Hidden storage available
+✓ Vault backup found in cloud
+✓ Vault backup downloaded
+✓ Vault restored locally
+
+  Enter your master password to verify the restore:
+
+  Master password: ********
+
+✓ Vault verified and unlocked
+✓ Google authentication saved securely
+
+  ✓ Vault restored successfully!
+
+  Your vault has been restored from the cloud backup.
+  Run "BLANK sync" to download your encrypted files.
+```
+</CodeGroup>
+
+## Behavior
+
+### First-time initialization
+
+1. **Password creation**: You'll be prompted to create a strong master password. This password:
+   - Encrypts all vault data
+   - Cannot be recovered if lost
+   - Must be confirmed by entering twice
+
+2. **Vault creation**: Creates encrypted vault structure in `~/.blankdrive/vault/`
+
+3. **Cloud storage configuration**: You'll choose between:
+   - **Hidden mode**: Files stored in Google Drive's appDataFolder (not visible in Drive UI)
+   - **Public mode**: Files stored in a visible `BlankDrive/` folder
+
+4. **Audit logging**: Logs the `vault_created` event
+
+### Restore mode (`--restore`)
+
+1. Checks that no local vault exists
+2. Prompts for cloud storage mode if not configured
+3. Connects to Google Drive
+4. Searches for `slasshy_vault_index_backup.enc` in cloud storage
+5. Downloads and restores vault structure
+6. Verifies with master password
+7. Saves Google OAuth credentials securely
+
+<Note>
+  The restore process requires the same master password used when the vault was originally created.
+</Note>
+
+## Error handling
+
+### Vault already exists
+
+```bash
+  Vault already exists!
+  Use "BLANK unlock" to access your vault.
+  Or use "BLANK init --restore" to restore from cloud.
+```
+
+Solution: Use `BLANK status` to check vault status, or delete the existing vault if you want to start fresh.
+
+### No cloud backup found (restore mode)
+
+```bash
+✗ No vault backup found in cloud
+
+  No backup found. You may need to:
+    1. Make sure you synced your vault before (BLANK sync)
+    2. Use the same Google account you used before
+```
+
+Solution: Verify you're using the correct Google account and that you previously ran `BLANK sync`.
+
+### Wrong password during restore verification
+
+```bash
+✗ Failed to unlock vault - wrong password?
+
+  The vault was restored but could not be unlocked.
+  Make sure you're using the correct master password.
+```
+
+Solution: The vault files are restored locally but locked. Use `BLANK unlock` with the correct master password.
+
+<Warning>
+  **Security notice**: Your master password is never stored anywhere. If you lose it, your vault data cannot be recovered. Write it down and store it in a secure physical location.
+</Warning>
+
+## Related commands
+
+- [`auth`](/commands/auth) - Authenticate with Google Drive
+- [`status`](/commands/status) - Check vault initialization status
+- [`lock`](/commands/lock) - Lock the vault after unlocking

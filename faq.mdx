@@ -1,0 +1,269 @@
+---
+title: Frequently Asked Questions
+description: Common questions about BlankDrive's features and functionality
+---
+
+## General Questions
+
+<Accordion title="What is BlankDrive?">
+  BlankDrive is a client-side, zero-knowledge vault for passwords, notes, TOTP secrets, and encrypted files that syncs to Google Drive. All encryption happens on your device before data is uploaded to the cloud.
+</Accordion>
+
+<Accordion title="Is BlankDrive free to use?">
+  Yes, BlankDrive is open-source software released under the MIT license. It's completely free to use, modify, and distribute.
+</Accordion>
+
+<Accordion title="What platforms does BlankDrive support?">
+  BlankDrive supports:
+  - **CLI:** Windows, macOS, Linux (Node.js 18+)
+  - **Web UI:** Any platform with a browser (runs locally)
+  - **Desktop App:** Windows (Tauri-based)
+</Accordion>
+
+## Security & Encryption
+
+<Accordion title="What does zero-knowledge encryption mean?">
+  Zero-knowledge encryption means:
+  - All encryption happens **on your device** using your master password
+  - Only **encrypted data** is uploaded to Google Drive
+  - Neither Google nor anyone else can read your data without your master password
+  - BlankDrive has **no backend server** that could access your data
+  - If you lose your master password, your data **cannot be recovered**
+</Accordion>
+
+<Accordion title="What encryption does BlankDrive use?">
+  BlankDrive uses industry-standard encryption:
+  - **Algorithm:** AES-256-GCM
+  - **Key Derivation:** Argon2id with strong parameters (64 MB memory cost, 3 iterations, 4 parallelism)
+  - **Sub-key Derivation:** HKDF-SHA256 for different contexts (index, entry, metadata)
+  - **IV Length:** 12 bytes (secure for GCM mode)
+  - **Auth Tag:** 16 bytes for authenticated encryption
+</Accordion>
+
+<Accordion title="Where are my OAuth credentials stored?">
+  Your Google OAuth credentials and tokens are:
+  - **Encrypted** using your vault key
+  - **Stored locally** in `~/.slasshy/` directory
+  - **Never sent** to any BlankDrive server (because there isn't one)
+  
+  Files:
+  - `~/.slasshy/drive_token.enc` (encrypted access tokens)
+  - `~/.slasshy/google_oauth_credentials.enc` (encrypted OAuth client credentials)
+</Accordion>
+
+## Google Drive Sync
+
+<Accordion title="How does Google Drive sync work?">
+  BlankDrive uses Google Drive for cloud storage:
+  
+  1. You create a vault locally protected by your master password
+  2. You add passwords, notes, and files locally
+  3. BlankDrive encrypts data on your device
+  4. Encrypted blobs are uploaded to **your own** Google Drive
+  5. On a new device, you restore using the same Google account and master password
+  
+  BlankDrive uses OAuth with `drive.file` and `drive.appdata` scopes, and **only accesses files it creates**.
+</Accordion>
+
+<Accordion title="What's the difference between public and hidden storage modes?">
+  BlankDrive offers two storage modes:
+  
+  **Public Mode (default):**
+  - Files stored in `Google Drive > BlankDrive/<folder>/`
+  - **Visible** in your Google Drive UI
+  - You can organize files by folder name
+  - Useful for verifying uploads
+  
+  **Hidden Mode:**
+  - Files stored in Google Drive's `appDataFolder`
+  - **Not visible** in your Drive UI
+  - Better privacy (files hidden from Drive search/UI)
+  - Cannot be manually deleted from Drive UI
+  
+  Switch modes anytime with: `BLANK settings --storage public` or `BLANK settings --storage hidden`
+</Accordion>
+
+<Accordion title="Can I use the same vault across multiple devices?">
+  Yes! This is a core use case for BlankDrive:
+  
+  1. Set up BlankDrive on your first device and upload data
+  2. On your second device, run `BLANK init --restore`
+  3. Authenticate with the **same Google account**
+  4. Enter the **same master password**
+  5. Select the **same storage mode and folder**
+  
+  Your encrypted vault will be downloaded and unlocked.
+</Accordion>
+
+<Accordion title="How are large files handled?">
+  BlankDrive automatically chunks large files:
+  - **Chunk size:** 20 MB per chunk
+  - **Parallel upload:** Up to 5 workers
+  - **Parallel download:** Adaptive (1-5 workers based on available RAM)
+  - Each chunk is encrypted separately with AAD binding for integrity
+</Accordion>
+
+## Data Recovery & Backup
+
+<Accordion title="What happens if I lose my master password?">
+  <Warning>
+  If you lose your master password, **your encrypted vault data cannot be recovered**. This is a fundamental property of zero-knowledge encryption.
+  </Warning>
+  
+  Best practices:
+  - Use a memorable but strong passphrase
+  - Store your password in a secure physical location
+  - Consider keeping an encrypted backup in a separate secure vault
+</Accordion>
+
+<Accordion title="Can I recover my vault if I lose access to my Google account?">
+  No. Your encrypted vault is stored in Google Drive, so you need access to the same Google account to restore your data.
+  
+  However, your local vault files remain in `~/.slasshy/` on your device. As long as you have:
+  - Access to your device
+  - Your master password
+  - The local vault files
+  
+  You can still access your data locally (though you won't be able to sync to cloud without Google Drive access).
+</Accordion>
+
+<Accordion title="How do I back up my vault?">
+  BlankDrive automatically backs up to Google Drive when you use upload/sync commands. For additional backup:
+  
+  1. **Cloud backup:** Your encrypted files are already in Google Drive
+  2. **Local backup:** Copy the `~/.slasshy/` directory to a secure location
+  3. **Password backup:** Store your master password securely offline
+  
+  To restore on a new device: `BLANK init --restore`
+</Accordion>
+
+## Usage & Features
+
+<Accordion title="Can I use BlankDrive without Google Drive?">
+  No, BlankDrive currently requires Google Drive for cloud sync. However, you can:
+  - Use the vault **locally only** without running `BLANK auth`
+  - Store passwords, notes, and files locally
+  - They just won't sync to the cloud
+</Accordion>
+
+<Accordion title="Does BlankDrive work offline?">
+  Yes! BlankDrive works offline for:
+  - Viewing stored passwords and notes
+  - Adding new entries (stored locally)
+  - Editing existing entries
+  - Generating passwords
+  
+  You need an internet connection for:
+  - OAuth authentication (`BLANK auth`)
+  - Uploading files to Drive
+  - Downloading files from Drive
+  - Restoring vault from cloud
+  - Syncing changes across devices
+</Accordion>
+
+<Accordion title="What types of data can I store in BlankDrive?">
+  BlankDrive supports:
+  - **Passwords:** Login credentials with username/password/URL
+  - **Notes:** Encrypted text notes with categories
+  - **Files:** Any file type, encrypted and chunked for large files
+  - **TOTP Secrets:** Two-factor authentication codes
+  - **Categories & Favorites:** Organize and mark important entries
+</Accordion>
+
+<Accordion title="Is there a file size limit?">
+  BlankDrive chunks files at 20 MB per chunk, so there's no hard limit in the app itself. However:
+  - Google Drive has storage quota limits (typically 15 GB free)
+  - Upload/download speed depends on your connection and available RAM
+  - Very large files will take longer to encrypt/decrypt
+</Accordion>
+
+## Desktop & Web UI
+
+<Accordion title="What's the difference between CLI, Web UI, and Desktop app?">
+  All three share the same backend and vault:
+  
+  **CLI (`BLANK`):**
+  - Terminal-based interface
+  - Full command access
+  - Best for power users and automation
+  
+  **Web UI (`BLANK web`):**
+  - Local web interface (runs at `localhost:4310`)
+  - Visual interface for vault management
+  - No remote backend (runs locally)
+  
+  **Desktop App:**
+  - Native Tauri-based Windows application
+  - Same Node backend as CLI/Web (sidecar process)
+  - Faster boot and lighter footprint
+  - Install with: `BLANK desktop --install`
+</Accordion>
+
+<Accordion title="Is the Web UI secure?">
+  Yes! The Web UI:
+  - Runs **locally only** on your machine
+  - Binds to `localhost` (127.0.0.1) only
+  - Has no remote backend
+  - Uses the same encryption as CLI
+  - Requires vault unlock before access
+  
+  The Web UI is just a visual interface to the same local vault used by the CLI.
+</Accordion>
+
+## Technical Questions
+
+<Accordion title="Does BlankDrive have a backend server?">
+  **No.** BlankDrive is fully client-side:
+  - No BlankDrive authentication server
+  - No remote token broker
+  - OAuth runs locally with Google directly (loopback + PKCE)
+  - All encryption happens on your device
+  - Encrypted data goes directly to your Google Drive
+</Accordion>
+
+<Accordion title="What Google Drive scopes does BlankDrive use?">
+  BlankDrive requests two minimal scopes:
+  - `drive.file` - Access only files created by BlankDrive
+  - `drive.appdata` - Access hidden app data folder (for hidden mode)
+  
+  BlankDrive **cannot** access other files in your Google Drive.
+</Accordion>
+
+<Accordion title="How does OAuth work in BlankDrive?">
+  BlankDrive uses OAuth 2.0 with PKCE for secure authentication:
+  
+  1. Starts a local callback server on `127.0.0.1` (random port)
+  2. Builds a PKCE challenge
+  3. Opens Google consent URL in your browser
+  4. Google redirects back to local loopback URL
+  5. Exchanges authorization code for tokens
+  6. Encrypts and stores tokens locally
+  
+  This is the same flow used by official Google desktop applications. See: [OAuth for Native Apps](https://developers.google.com/identity/protocols/oauth2/native-app)
+</Accordion>
+
+## Updates & Maintenance
+
+<Accordion title="How do I update BlankDrive?">
+  **For CLI:**
+  ```bash
+  BLANK update --check
+  BLANK update --install
+  ```
+  
+  **For Desktop:**
+  The desktop app checks for updates every 24 hours and prompts you to install.
+  
+  **Manual update:**
+  ```bash
+  npm update -g blankdrive
+  ```
+</Accordion>
+
+<Accordion title="Where can I report bugs or request features?">
+  Visit the [GitHub repository](https://github.com/SlasshyOverhere/BlankDrive) to:
+  - Report bugs in the Issues section
+  - Request new features
+  - Contribute to the project
+  - Review the source code
+</Accordion>

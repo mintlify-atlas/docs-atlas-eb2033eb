@@ -1,0 +1,186 @@
+---
+title: "web"
+description: "Launch the BlankDrive web interface on localhost"
+---
+
+Start a local web server to access BlankDrive through a browser-based interface.
+
+## Usage
+
+```bash
+BLANK web [options]
+```
+
+Aliases: `ui`
+
+## Overview
+
+The `web` command launches a local HTTP server that provides a browser-based interface for BlankDrive. The web UI runs on `localhost` and allows you to manage your vault through a graphical interface.
+
+- Default port: `4310`
+- Default host: `localhost`
+- Access via browser at `http://localhost:4310`
+- Server runs until terminated with `Ctrl+C`
+
+## Options
+
+<ParamField path="--port" type="number" default="4310">
+  Port number to listen on
+  
+  Must be between 1 and 65535. If the specified port is already in use, the command will fail with an error.
+  
+  Shorthand: `-p`
+</ParamField>
+
+<ParamField path="--open" type="boolean">
+  Automatically open the web UI in your default browser after starting the server
+  
+  If the browser fails to open automatically, the URL is still displayed for manual access.
+  
+  Shorthand: `-o`
+</ParamField>
+
+## Examples
+
+### Start Web UI on Default Port
+
+Launch the web interface on port 4310:
+
+```bash
+BLANK web
+```
+
+```
+  BlankDrive Web UI
+
+  URL: http://localhost:4310
+  Bind: localhost:4310
+  Press Ctrl+C to stop.
+```
+
+### Start on Custom Port
+
+Run the web server on port 8080:
+
+```bash
+BLANK web --port 8080
+```
+
+```
+  BlankDrive Web UI
+
+  URL: http://localhost:8080
+  Bind: localhost:8080
+  Press Ctrl+C to stop.
+```
+
+### Auto-Open Browser
+
+Start the server and automatically open it in your browser:
+
+```bash
+BLANK web --open
+```
+
+Alternatively using the alias and shorthand:
+
+```bash
+BLANK ui -o -p 3000
+```
+
+```
+  BlankDrive Web UI
+
+  URL: http://localhost:3000
+  Bind: localhost:3000
+  Press Ctrl+C to stop.
+```
+
+## Server Lifecycle
+
+### Starting the Server
+
+When you run the command, the server:
+1. Attempts to bind to the specified host and port
+2. Displays the access URL and bind address
+3. Optionally opens your browser (if `--open` is used)
+4. Continues running until manually stopped
+
+### Stopping the Server
+
+To stop the web server:
+
+- Press `Ctrl+C` in the terminal
+- The server will shut down gracefully
+
+```bash
+^C
+  Shutting down web UI...
+```
+
+The process also responds to `SIGTERM` signals for graceful shutdown.
+
+## Error Handling
+
+### Port Already in Use
+
+If the port is already occupied:
+
+```
+  Failed to start web UI: Port 4310 is already in use.
+```
+
+Solution: Use a different port with `--port`
+
+### Invalid Port Number
+
+If an invalid port is specified:
+
+```
+  Failed to start web UI: Port must be a number between 1 and 65535.
+```
+
+### Browser Auto-Open Failure
+
+If `--open` fails to launch the browser:
+
+```
+  Could not auto-open browser: [error message]
+```
+
+The server continues running normally - you can manually open the URL.
+
+## Use Cases
+
+<CodeGroup>
+```bash Development
+# Use custom port for development
+BLANK web --port 3000 --open
+```
+
+```bash Quick Access
+# Launch with browser for quick access
+BLANK ui -o
+```
+
+```bash Alternative Port
+# Use alternative port if default is taken
+BLANK web -p 8080
+```
+</CodeGroup>
+
+## Network Binding
+
+The web server binds to `localhost` only, which means:
+
+- The UI is **not accessible** from other devices on your network
+- Access is restricted to the local machine for security
+- Only you can access the web interface on your computer
+
+This design ensures your vault data remains private and is not exposed to the network.
+
+## Related Commands
+
+- [desktop](/commands/desktop) - Download the desktop application
+- [status](/commands/status) - Check vault status
+- [init](/commands/init) - Initialize a new vault

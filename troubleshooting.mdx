@@ -1,0 +1,157 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for BlankDrive
+---
+
+## Common Issues
+
+This guide covers the most frequently encountered issues when using BlankDrive and how to resolve them.
+
+### redirect_uri_mismatch
+
+This error occurs when your OAuth client type is not configured correctly in Google Cloud Console.
+
+<Warning>
+BlankDrive requires a **Desktop app** OAuth client type, not a Web application type.
+</Warning>
+
+**Solution:**
+
+1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
+2. Ensure your OAuth client is set to `Desktop app` type
+3. Re-authenticate in BlankDrive:
+
+```bash
+BLANK auth --setup
+```
+
+### File Not Visible in Google Drive
+
+You've successfully uploaded a file, but it doesn't appear in your Google Drive UI.
+
+**Cause:** You're likely using `hidden` storage mode, which stores files in Google Drive's `appDataFolder`. This folder is not visible in the Drive UI by design.
+
+**Solution:**
+
+Switch to public storage mode to make files visible:
+
+```bash
+BLANK settings --storage public
+```
+
+<Note>
+Switching storage modes does not automatically migrate existing cloud files. You'll need to re-upload files if you want them in the new location.
+</Note>
+
+### Need to Re-authenticate
+
+If your OAuth tokens have expired or you're experiencing authentication issues:
+
+```bash
+BLANK auth --logout
+BLANK auth
+```
+
+This will:
+1. Clear your existing OAuth tokens
+2. Start a fresh authentication flow
+3. Store new encrypted tokens locally
+
+### Access Blocked / Unverified App Warning
+
+Google shows an "Access blocked" or "This app isn't verified" warning when trying to authenticate.
+
+**Cause:** Your Google Cloud project's OAuth consent screen is in testing mode and your account isn't added as a test user.
+
+**Solution:**
+
+1. Go to [OAuth Consent Screen Settings](https://console.cloud.google.com/apis/credentials/consent)
+2. Add your Google account email as a test user
+3. Try authenticating again with `BLANK auth`
+
+<Note>
+If you're the only user, keeping the app in testing mode is fine. Publishing the app is only needed for sharing with others.
+</Note>
+
+## Restore Issues
+
+### Cannot Restore Vault
+
+If `BLANK init --restore` fails, verify you have:
+
+- **Same Google account** used for the original backup
+- **Correct master password** from the original vault
+- **Correct storage mode and folder** where your backup was saved
+
+```bash
+# Check current storage settings
+BLANK settings
+
+# Switch storage mode if needed
+BLANK settings --storage hidden  # or public
+```
+
+## Performance Issues
+
+### Slow Upload/Download
+
+BlankDrive automatically adjusts parallel workers based on available RAM:
+
+- **5 workers** when free RAM > 2 GB
+- **2 workers** when free RAM > 512 MB
+- **1 worker** otherwise
+
+For large files (>20 MB), BlankDrive chunks them into 20 MB pieces for parallel transfer.
+
+<Note>
+If you're experiencing slow transfers, check your system's available memory and close unnecessary applications.
+</Note>
+
+## Data & Security
+
+### Lost Master Password
+
+<Warning>
+If you lose your master password, **encrypted vault data cannot be recovered**. BlankDrive uses zero-knowledge encryption, meaning there is no password reset mechanism.
+</Warning>
+
+Best practices:
+- Store your master password in a secure location
+- Use a memorable but strong passphrase
+- Consider keeping an encrypted backup of your password in a separate secure location
+
+### Vault Unlocked on Compromised Machine
+
+<Warning>
+If your machine is compromised while the vault is unlocked, local secrets can be exposed.
+</Warning>
+
+**Prevention:**
+- Always lock your vault when not in use: `BLANK lock`
+- Enable autolock in the interactive shell
+- Use the desktop app with proper screen lock policies
+
+## Local Data Issues
+
+### Check Local Storage Paths
+
+BlankDrive stores all local data in `~/.slasshy/`:
+
+- **Vault and config:** `~/.slasshy/`
+- **Encrypted tokens:** `~/.slasshy/drive_token.enc`
+- **Encrypted OAuth credentials:** `~/.slasshy/google_oauth_credentials.enc`
+- **Cloud storage config:** `~/.slasshy/cloud_storage_config.json`
+
+If you're experiencing issues, verify these files exist and have proper permissions:
+
+```bash
+ls -la ~/.slasshy/
+```
+
+## Getting More Help
+
+If your issue isn't covered here:
+
+1. Check the [FAQ](/faq) for additional questions
+2. Review the CLI Reference documentation for command details
+3. Report issues on [GitHub](https://github.com/SlasshyOverhere/BlankDrive/issues)

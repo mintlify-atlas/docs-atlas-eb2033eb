@@ -1,0 +1,529 @@
+---
+title: Web UI
+description: Use BlankDrive's local web interface for visual vault management
+---
+
+BlankDrive includes a local web UI that provides a browser-based interface for managing your vault. It runs entirely on your machine and requires no remote backend.
+
+## Overview
+
+The Web UI:
+
+- Runs **locally** on `localhost` (default port: `4310`)
+- Uses the **same vault** as the CLI
+- Provides a **visual interface** for all vault operations
+- **Zero remote backend** - all requests stay on your device
+- Accessible from **any browser** on the same machine
+
+<Info>
+  The Web UI server binds to `localhost` only. It cannot be accessed from other devices on your network.
+</Info>
+
+## Starting the Web UI
+
+### Basic Start
+
+Launch the web server:
+
+```bash
+BLANK web
+```
+
+**Output:**
+
+```bash
+  BlankDrive Web UI
+
+  URL: http://localhost:4310
+  Bind: localhost:4310
+  Press Ctrl+C to stop.
+```
+
+Open your browser and navigate to `http://localhost:4310`.
+
+### Auto-Open Browser
+
+Start the server and automatically open the browser:
+
+```bash
+BLANK web --open
+```
+
+This launches your default browser with the web UI URL.
+
+### Custom Port
+
+Run on a different port:
+
+```bash
+BLANK web --port 8080
+```
+
+Access at: `http://localhost:8080`
+
+<CodeGroup>
+```bash Port 3000
+BLANK web --port 3000
+```
+
+```bash Port 5000 with Auto-Open
+BLANK web --port 5000 --open
+```
+
+```bash Shell Mode
+BLANK
+> web --open
+```
+</CodeGroup>
+
+### Valid Port Range
+
+Ports must be between `1` and `65535`.
+
+```bash
+BLANK web --port 99999
+# Error: Port must be a number between 1 and 65535.
+```
+
+## Web UI Features
+
+### Vault Unlock
+
+When you first access the web UI:
+
+1. You'll see the unlock screen
+2. Enter your master password
+3. Click **Unlock Vault**
+4. You'll be redirected to the dashboard
+
+<Note>
+  The web UI session remains unlocked until you click "Lock Vault" or stop the server.
+</Note>
+
+### Dashboard
+
+The main dashboard shows:
+
+- **Entry count** by type (passwords, notes, files)
+- **Recent entries** (last 5 modified)
+- **Favorites** (quick access to starred items)
+- **Google Drive status** (connected or not)
+- **Storage mode** (public/hidden)
+
+### Password Management
+
+**View passwords:**
+
+1. Click **Passwords** in the sidebar
+2. Browse the list of entries
+3. Click an entry to view details
+4. Click **eye icon** to reveal password
+5. Click **Copy** to copy to clipboard
+
+**Add password:**
+
+1. Click **Add Password** button
+2. Fill in the form:
+   - Title (required)
+   - Username
+   - Password (or click "Generate")
+   - URL
+   - Notes
+3. Click **Save**
+
+**Edit password:**
+
+1. Click on an entry
+2. Click **Edit** button
+3. Modify fields as needed
+4. Click **Save Changes**
+
+**Delete password:**
+
+1. Click on an entry
+2. Click **Delete** button
+3. Confirm deletion
+
+### Notes Management
+
+**Create note:**
+
+1. Go to **Notes** tab
+2. Click **New Note**
+3. Enter title and content
+4. Click **Save**
+
+**View note:**
+
+1. Click on a note from the list
+2. Content is displayed in the viewer
+3. Click **Edit** to modify
+
+**Edit note:**
+
+1. Open a note
+2. Click **Edit**
+3. Modify title or content
+4. Click **Save**
+
+### File Management
+
+**Upload file:**
+
+1. Go to **Files** tab
+2. Click **Upload File**
+3. Select file from file picker
+4. Enter folder name (if public mode)
+5. Click **Upload**
+6. Progress bar shows encryption and upload status
+
+**Download file:**
+
+1. Click on a file entry
+2. Click **Download**
+3. File is downloaded, decrypted, and saved to your browser's download location
+
+**File info:**
+
+Each file entry shows:
+- File name
+- Size
+- MIME type
+- Upload date
+- Number of chunks
+- Favorite status
+
+### Search and Filter
+
+**Search bar:**
+
+- Type to search across all entries
+- Searches titles, usernames, URLs, and notes
+- Results update in real-time
+
+**Type filter:**
+
+- Click **All**, **Passwords**, **Notes**, or **Files** tabs
+- Only entries of that type are shown
+
+**Category filter:**
+
+- Select a category from dropdown (if you've set categories on entries)
+- Shows only entries in that category
+
+### Google Drive Integration
+
+**Authenticate:**
+
+1. Go to **Settings** → **Google Drive**
+2. Click **Authenticate**
+3. Enter OAuth Client ID and Secret
+4. Browser opens for Google consent
+5. Return to web UI after authorization
+6. Status changes to "Connected"
+
+**Sync vault:**
+
+1. Click **Sync** button in the top bar
+2. Progress indicator shows sync status
+3. Toast notification confirms completion
+
+**Logout:**
+
+1. Go to **Settings** → **Google Drive**
+2. Click **Logout**
+3. Tokens are removed
+
+### Settings
+
+**Storage mode:**
+
+1. Go to **Settings** → **Cloud Storage**
+2. Select **Public** or **Hidden**
+3. If public, enter folder name
+4. Click **Save**
+
+**Folder name:**
+
+1. Go to **Settings** → **Cloud Storage**
+2. Enter new folder name
+3. Click **Update Folder**
+
+**Lock timeout:**
+
+1. Go to **Settings** → **Security**
+2. Set auto-lock timeout (in minutes)
+3. Vault automatically locks after inactivity
+
+### Favorites
+
+Toggle favorite status:
+
+1. Open any entry (password, note, or file)
+2. Click the **star icon** in the top-right
+3. Entry is added to favorites list
+
+**View all favorites:**
+
+1. Click **Favorites** in the sidebar
+2. All starred entries are listed
+
+### Password Generator
+
+Generate strong passwords:
+
+1. When adding/editing a password, click **Generate**
+2. Configure options:
+   - Length (8-128 characters)
+   - Include uppercase
+   - Include lowercase
+   - Include numbers
+   - Include symbols
+3. Click **Generate**
+4. Password strength is shown (Weak, Fair, Good, Strong, Excellent)
+5. Click **Use This Password** to apply
+
+**Passphrase generator:**
+
+1. Select **Passphrase** tab in generator
+2. Choose word count (3-10 words)
+3. Click **Generate**
+4. Example: `correct-horse-battery-staple`
+
+## Server Management
+
+### Stopping the Server
+
+Press `Ctrl+C` in the terminal where `BLANK web` is running:
+
+```bash
+^C
+  Shutting down web UI...
+```
+
+The web UI becomes inaccessible, but all vault data is saved.
+
+### Running in Background
+
+Use a process manager like `pm2`:
+
+```bash
+npm install -g pm2
+pm2 start "blankdrive web" --name blankdrive-web
+pm2 logs blankdrive-web
+```
+
+Stop with:
+
+```bash
+pm2 stop blankdrive-web
+```
+
+### Port Already in Use
+
+If port 4310 is occupied:
+
+```bash
+BLANK web --port 4311
+```
+
+Or kill the process using port 4310:
+
+<CodeGroup>
+```bash Windows (PowerShell)
+Get-Process -Id (Get-NetTCPConnection -LocalPort 4310).OwningProcess | Stop-Process
+```
+
+```bash Linux/macOS
+kill $(lsof -t -i:4310)
+```
+</CodeGroup>
+
+## Security
+
+### Local-Only Access
+
+The web server binds to `localhost` (127.0.0.1) only:
+
+- ✅ Accessible from the same machine
+- ❌ NOT accessible from other devices on your network
+- ❌ NOT accessible from the internet
+
+<Warning>
+  Do NOT expose the web UI to the internet via port forwarding or reverse proxy. It has no authentication beyond the initial vault unlock.
+</Warning>
+
+### Session Security
+
+Once you unlock the vault in the web UI:
+
+- Session persists until you lock the vault or stop the server
+- No additional authentication required for API calls
+- Auto-lock timeout can be configured in settings
+
+<Info>
+  For maximum security, stop the web server when not in use: `Ctrl+C`
+</Info>
+
+### API Endpoints
+
+The web UI exposes a REST API at `/api/*`:
+
+- `/api/vault/unlock` - Unlock vault
+- `/api/vault/lock` - Lock vault
+- `/api/entries` - List entries
+- `/api/entries/:id` - Get/update/delete entry
+- `/api/cli/run` - Execute CLI commands (requires unlocked vault)
+
+All endpoints require the vault to be unlocked (except `/unlock`).
+
+### CORS and CSRF
+
+- **CORS:** Disabled (only `localhost` can make requests)
+- **CSRF:** Not implemented (assumes trusted local environment)
+
+<Warning>
+  If you modify the server to allow remote access, implement proper authentication, CORS, and CSRF protection.
+</Warning>
+
+## Architecture
+
+The web UI consists of:
+
+1. **Express.js server** (Node.js backend)
+2. **Static frontend** (HTML/CSS/JavaScript)
+3. **Vault API bridge** (calls CLI backend functions)
+4. **WebSocket** (for real-time sync updates - optional)
+
+**File structure:**
+
+```
+src/webui/
+├── server.js           # Express server
+├── routes/             # API route handlers
+├── static/             # Frontend assets
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
+└── middleware/         # Auth, error handling
+```
+
+## Customization
+
+### Changing Default Port
+
+Edit the source code or set an environment variable:
+
+```bash
+export BLANKDRIVE_WEB_PORT=5000
+BLANK web
+```
+
+(Note: This requires adding support in the code - not currently implemented.)
+
+### Custom Frontend
+
+The web UI frontend is in `src/webui/static/`. You can modify:
+
+- **Styles:** Edit `styles.css`
+- **Layout:** Edit `index.html`
+- **Logic:** Edit `app.js`
+
+Rebuild the project:
+
+```bash
+npm run build
+npm link
+```
+
+## Troubleshooting
+
+<Accordion title="Can't access web UI after starting server">
+  **Cause:** Browser cached old session or port conflict.
+
+  **Solution:**
+  1. Hard refresh: `Ctrl+Shift+R` (Windows) or `Cmd+Shift+R` (Mac)
+  2. Check server is running: Look for "BlankDrive Web UI" message
+  3. Verify URL: `http://localhost:4310` (not `https`)
+  4. Try a different port: `BLANK web --port 4311`
+</Accordion>
+
+<Accordion title="Web UI shows 'Vault not found' error">
+  **Cause:** No vault exists on the system.
+
+  **Solution:**
+  1. Stop the web server: `Ctrl+C`
+  2. Initialize a vault via CLI: `BLANK init`
+  3. Restart the web server: `BLANK web --open`
+</Accordion>
+
+<Accordion title="Upload/Download buttons don't work">
+  **Cause:** JavaScript error or vault is locked.
+
+  **Solution:**
+  1. Check browser console for errors (F12 → Console tab)
+  2. Ensure vault is unlocked
+  3. Verify Google Drive is authenticated (for uploads)
+  4. Try refreshing the page
+</Accordion>
+
+<Accordion title="Auto-open browser fails">
+  **Cause:** No default browser set or browser blocked.
+
+  **Solution:**
+  1. Manually open `http://localhost:4310` in your browser
+  2. Or use: `BLANK web` (without `--open`)
+</Accordion>
+
+<Accordion title="Port 4310 already in use">
+  **Cause:** Another BlankDrive instance or different app using the port.
+
+  **Solution:**
+  1. Use a different port: `BLANK web --port 5000`
+  2. Or kill the existing process (see "Port Already in Use" section)
+</Accordion>
+
+## Performance
+
+### Large Vaults
+
+For vaults with 1000+ entries:
+
+- Initial load may take 1-2 seconds
+- Search is real-time (client-side filtering)
+- Pagination is recommended for >500 entries (not yet implemented)
+
+### File Uploads
+
+Large files (>100 MB):
+
+- Upload progress is shown in real-time
+- Files are chunked at 20 MB per chunk
+- Browser may become unresponsive during encryption (runs in main thread)
+
+<Info>
+  Web Workers for background encryption are planned for future releases.
+</Info>
+
+## Comparison: Web UI vs CLI vs Desktop
+
+| Feature | Web UI | CLI | Desktop App |
+|---------|--------|-----|-------------|
+| Interface | 🌐 Browser | 💻 Terminal | 🖥️ Native GUI |
+| Startup | ⚠️ Start server | ✅ Instant | ⚠️ Fast |
+| Accessibility | ✅ Any browser | ❌ Terminal only | ✅ GUI app |
+| Automation | ⚠️ API only | ✅ Scriptable | ❌ No |
+| Always On | ⚠️ Server must run | ✅ Yes | ✅ Yes |
+| Memory Usage | ⚠️ ~50 MB | ✅ ~20 MB | ⚠️ ~40 MB |
+| Remote Access | ❌ Localhost only | ✅ SSH | ❌ No |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Desktop App" icon="desktop" href="/guides/desktop-app">
+    Install the native Windows app
+  </Card>
+  <Card title="Google OAuth Setup" icon="key" href="/guides/google-oauth-setup">
+    Connect to Google Drive
+  </Card>
+</CardGroup>

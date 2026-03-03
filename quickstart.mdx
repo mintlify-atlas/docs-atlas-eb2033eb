@@ -1,80 +1,477 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get your BlankDrive vault running in under 5 minutes
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through:
+1. Creating your encrypted vault
+2. Authenticating with Google Drive
+3. Adding your first password entry
+4. Syncing to the cloud
 
-### Step 1: Set up your local environment
+<Info>
+  Make sure you've already [installed BlankDrive](/installation) and set up Google Cloud OAuth credentials.
+</Info>
+
+## Step 1: Initialize Your Vault
+
+Create a new encrypted vault with a master password:
+
+```bash
+BLANK init
+```
+
+<Steps>
+  <Step title="Choose Master Password">
+    You'll be prompted to create a master password:
+    ```
+    ? Enter master password: [hidden]
+    ? Confirm master password: [hidden]
+    ```
+
+    <Warning>
+      **CRITICAL**: Your master password is the ONLY way to decrypt your vault. There is no password recovery. Choose a strong password and store it safely!
+    </Warning>
+  </Step>
+
+  <Step title="Select Storage Mode">
+    Choose how encrypted files are stored in Google Drive:
+
+    ```
+    ? Select cloud storage mode:
+    ❯ public - Visible in Drive UI under BlankDrive/
+      hidden - Stored in appDataFolder (not visible)
+    ```
+
+    **Recommendations:**
+    - **public**: Easier to manage, visible in Drive, good for backups
+    - **hidden**: More private, hidden from Drive UI, appDataFolder API
+  </Step>
+
+  <Step title="Name Your Folder" if="public mode">
+    If you chose `public` mode, name your storage folder:
+    ```
+    ? Enter folder name for public content: my-laptop
+    ```
+    Files will be stored at: `Google Drive > BlankDrive/my-laptop/`
+  </Step>
+
+  <Step title="Vault Created">
+    Success! Your vault is now initialized:
+    ```
+    ✓ Encrypted vault created
+    ✓ Vault initialized successfully!
+
+    Quick start:
+      BLANK add       Add a new entry
+      BLANK list      List all entries
+      BLANK get       Retrieve an entry
+      BLANK auth      Connect to Google Drive
+      BLANK sync      Sync with Google Drive
+    ```
+  </Step>
+</Steps>
+
+## Step 2: Authenticate with Google Drive
+
+Connect BlankDrive to your Google Drive account:
+
+```bash
+BLANK auth
+```
+
+<Steps>
+  <Step title="Enter Vault Password">
+    Unlock your vault to store OAuth tokens securely:
+    ```
+    ? Enter master password: [hidden]
+    ✓ Vault unlocked
+    ```
+  </Step>
+
+  <Step title="Enter OAuth Credentials">
+    Provide your Google OAuth Client ID and Secret (from Google Cloud Console):
+    ```
+    ? Enter Google OAuth Client ID: 123456789-abc....apps.googleusercontent.com
+    ? Enter Google OAuth Client Secret: GOCSPX-abc...
+    ✓ Google OAuth credentials saved.
+    ```
+
+    <Tip>
+      Don't have OAuth credentials? Follow the [Google Cloud Setup guide](/installation).
+    </Tip>
+  </Step>
+
+  <Step title="Complete OAuth Flow">
+    BlankDrive opens your browser for Google authentication:
+    ```
+    Opening browser for Google authentication...
+    ✓ Waiting for authorization...
+    ✓ Google Drive connected
+    ```
+
+    - Select your Google account
+    - Grant Drive permissions
+    - Browser will show "Authentication successful"
+  </Step>
+
+  <Step title="Tokens Encrypted">
+    OAuth tokens are encrypted and stored locally:
+    ```
+    ✓ Successfully connected to Google Drive!
+    Your tokens are encrypted and stored locally.
+
+    You can now use "BLANK sync" to upload your entries.
+    ```
+  </Step>
+</Steps>
+
+### OAuth Flow Architecture
+
+BlankDrive uses **local loopback OAuth** with PKCE:
+
+1. Starts local server on `http://127.0.0.1:<random-port>`
+2. Generates PKCE challenge
+3. Opens Google consent URL in browser
+4. Google redirects back to local loopback
+5. Exchanges authorization code for tokens
+6. Encrypts tokens with vault keys
+
+<Info>
+  All OAuth communication is direct between your machine and Google. No third-party servers are involved.
+</Info>
+
+## Step 3: Add Your First Entry
+
+Store a password, note, or credential:
+
+```bash
+BLANK add
+```
+
+<Steps>
+  <Step title="Fill Entry Details">
+    Interactive prompts guide you:
+    ```
+    ? Entry title: GitHub
+    ? Username: myusername
+    ? Password: [hidden]
+    ? URL: https://github.com
+    ? Notes: My GitHub account credentials
+    ```
+  </Step>
+
+  <Step title="Entry Encrypted">
+    Entry is encrypted with AES-256-GCM:
+    ```
+    ✓ Encrypting and saving entry...
+    ✓ Entry added
+
+    Entry "GitHub" saved successfully!
+    ID: 9a3f2c1b-4e8d-4a9c-b2f1-8e7a6d5c4b3a
+
+    Note: Run "BLANK sync" to upload to Google Drive.
+    ```
+  </Step>
+</Steps>
+
+### Password Generation
+
+Generate strong passwords:
+
+```bash
+BLANK generate --length 24 --symbols --numbers
+```
+
+Options:
+- `--length <num>`: Password length (default: 16)
+- `--numbers`: Include numbers
+- `--symbols`: Include special characters
+- `--uppercase`: Include uppercase letters
+- `--lowercase`: Include lowercase letters
+
+## Step 4: List and Retrieve Entries
+
+### List All Entries
+
+```bash
+BLANK list
+```
+
+Output:
+```
+Vault Entries (1 total)
+
+  [1] GitHub
+      Username: myusername
+      URL: https://github.com
+      Created: 2024-03-15 10:30 AM
+      ID: 9a3f2c1b-4e8d-4a9c-b2f1-8e7a6d5c4b3a
+```
+
+### Retrieve Entry
+
+```bash
+BLANK get GitHub
+```
+
+Options:
+- `--copy`: Copy password to clipboard
+- `--show-password`: Display password in terminal
+
+<CodeGroup>
+```bash Copy to Clipboard
+BLANK get GitHub --copy
+# ✓ Password copied to clipboard
+```
+
+```bash Show Password
+BLANK get GitHub --show-password
+# Password: ****************
+```
+</CodeGroup>
+
+### Fuzzy Search
+
+BlankDrive uses fuzzy search powered by Fuse.js:
+
+```bash
+BLANK get git      # Matches "GitHub"
+BLANK get hub      # Matches "GitHub"
+BLANK get myuser   # Matches by username
+```
+
+## Step 5: Sync to Google Drive
+
+Upload encrypted vault to Google Drive:
+
+```bash
+BLANK sync
+```
+
+Sync process:
+```
+✓ Connecting to Google Drive...
+✓ Uploading vault index...
+✓ Uploading 1 entry...
+✓ Sync completed successfully!
+
+Last sync: Just now
+Entries synced: 1
+```
+
+<Info>
+  Sync encrypts your vault index and all entries before upload. Google sees only encrypted blobs.
+</Info>
+
+## Common Operations
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="Upload Encrypted File">
+    ```bash
+    BLANK upload secret-document.pdf
+    ```
+
+    - Files are encrypted with AES-256-GCM + AAD
+    - Large files are chunked at 20 MB per chunk
+    - Metadata stored in vault index
+    - Supports both public and hidden storage modes
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+
+  <Accordion title="Download Encrypted File">
+    ```bash
+    BLANK download secret-document
+    ```
+
+    - Fuzzy search matches filename
+    - Downloads all chunks in parallel (adaptive concurrency)
+    - Decrypts locally
+    - Writes restored file to current directory
+  </Accordion>
+
+  <Accordion title="Edit Existing Entry">
+    ```bash
+    BLANK edit GitHub
+    ```
+
+    - Fuzzy search finds entry
+    - Interactive prompts for each field
+    - Updates encrypted entry in vault
+  </Accordion>
+
+  <Accordion title="Delete Entry">
+    ```bash
+    BLANK delete GitHub --force
+    ```
+
+    - `--force`: Skip confirmation prompt
+    - Removes from vault and marks for cloud deletion
+  </Accordion>
+
+  <Accordion title="Lock Vault">
+    ```bash
+    BLANK lock
+    ```
+
+    - Clears encryption keys from memory
+    - Requires password to unlock again
+    - Vault data remains encrypted on disk
+  </Accordion>
+
+  <Accordion title="Check Vault Status">
+    ```bash
+    BLANK status
+    ```
+
+    Shows:
+    - Vault lock status
+    - Total entries
+    - Last sync time
+    - Google Drive connection status
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## Restore Vault on New Device
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Restore your vault from Google Drive backup:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```bash
+BLANK init --restore
+```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+<Steps>
+  <Step title="Select Storage Mode">
+    Choose the same mode used during initial setup (public or hidden).
+  </Step>
 
-### Step 3: Go live
+  <Step title="Authenticate Google">
+    Enter OAuth credentials and complete browser authentication.
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Download Backup">
+    BlankDrive searches for vault backup in cloud and downloads.
+  </Step>
 
-## Next steps
+  <Step title="Enter Master Password">
+    Verify vault with your master password:
+    ```
+    ? Enter master password: [hidden]
+    ✓ Vault verified and unlocked
+    ✓ Vault restored successfully!
+    ```
+  </Step>
 
-Now that you have your docs running, explore these key features:
+  <Step title="Sync Files">
+    Download encrypted files:
+    ```bash
+    BLANK sync
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Restore requires:
+  - Same Google account used for backup
+  - Correct master password
+  - Same storage mode (public/hidden) and folder name
+</Warning>
+
+## Advanced Features
 
 <CardGroup cols={2}>
+  <Card title="Interactive Shell" icon="terminal">
+    Launch full-featured shell:
+    ```bash
+    BLANK
+    ```
+    Includes additional commands: `sync`, `totp`, `breach`, `duress`, `theme`, `history`
+  </Card>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+  <Card title="Web UI" icon="browser">
+    Local web console:
+    ```bash
+    BLANK web --open
+    ```
+    Accessible at `http://localhost:4310`
+  </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+  <Card title="TOTP / 2FA" icon="key">
+    Add TOTP secret:
+    ```bash
+    BLANK totp add
+    ```
+    Generate codes:
+    ```bash
+    BLANK totp GitHub
+    ```
+  </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Security Audit" icon="shield-check">
+    Audit passwords:
+    ```bash
+    BLANK audit
+    ```
+    Checks for weak passwords and breaches
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="redirect_uri_mismatch error">
+    **Cause**: OAuth client type is wrong.
+
+    **Solution**:
+    1. Ensure OAuth client is **Desktop app** (not Web application)
+    2. Update credentials:
+       ```bash
+       BLANK auth --setup
+       ```
+  </Accordion>
+
+  <Accordion title="Upload success but file not visible in Drive">
+    **Cause**: You're in `hidden` mode.
+
+    **Solution**:
+    - Hidden mode uses `appDataFolder` (not visible in Drive UI)
+    - Switch to public mode:
+      ```bash
+      BLANK settings --storage public
+      ```
+  </Accordion>
+
+  <Accordion title="Wrong password error">
+    **Cause**: Incorrect master password.
+
+    **Solution**:
+    - No password recovery is possible (zero-knowledge design)
+    - If you have Google Drive backup, restore won't work without correct password
+    - Consider using duress mode if under threat
+  </Accordion>
+
+  <Accordion title="Access blocked: Unverified app">
+    **Cause**: Google requires test user approval for unverified apps.
+
+    **Solution**:
+    1. Go to [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent)
+    2. Add your Google account as test user
+    3. Retry authentication:
+       ```bash
+       BLANK auth --logout
+       BLANK auth
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture Deep Dive" icon="diagram-project" href="/architecture">
+    Learn how encryption, key derivation, and sync work under the hood
+  </Card>
+  <Card title="CLI Reference" icon="book">
+    Complete command reference and options (coming soon)
+  </Card>
+</CardGroup>

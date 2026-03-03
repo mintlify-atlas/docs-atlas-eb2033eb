@@ -1,0 +1,511 @@
+---
+title: Cloud Storage
+description: Understanding storage modes, folder configuration, and sync behavior in BlankDrive
+---
+
+BlankDrive encrypts your vault data and stores it in your Google Drive. You can choose between two storage modes with different visibility and organization options.
+
+## Storage Modes
+
+BlankDrive offers two cloud storage modes:
+
+<CardGroup cols={2}>
+  <Card title="Public Mode" icon="folder-open">
+    Files are visible in Google Drive UI under `BlankDrive/<folder>/`
+  </Card>
+  <Card title="Hidden Mode" icon="eye-slash">
+    Files are stored in Drive's `appDataFolder` (not visible in Drive UI)
+  </Card>
+</CardGroup>
+
+### Public Mode
+
+**Storage location:** `Google Drive > BlankDrive/<your-folder>/`
+
+**Characteristics:**
+- ✅ Visible in Google Drive web interface
+- ✅ Can be manually backed up or downloaded via Drive UI
+- ✅ Multiple folder names supported (organize by device/profile)
+- ✅ Easy to verify cloud sync status
+- ⚠️ Encrypted files are visible (but unreadable without master password)
+
+**Use cases:**
+- Personal backups you want to see in Drive
+- Multiple devices with different folder names (e.g., "laptop", "desktop")
+- Manual cloud storage management
+
+### Hidden Mode
+
+**Storage location:** `appDataFolder` (Google Drive application data)
+
+**Characteristics:**
+- ✅ Not visible in Google Drive UI
+- ✅ Lower visibility of encrypted data
+- ✅ Automatic cleanup when app data is cleared
+- ⚠️ Can't be manually accessed via Drive web interface
+- ⚠️ Harder to verify sync status
+
+**Use cases:**
+- Maximum privacy (files hidden from Drive UI)
+- Single-device usage
+- Minimal Drive folder clutter
+
+<Note>
+  Both modes use the same encryption (AES-256-GCM). The difference is visibility in Google Drive, not security.
+</Note>
+
+## Configuring Storage Mode
+
+### During First-Time Setup
+
+When you run `BLANK auth` for the first time, you'll be prompted to select a storage mode:
+
+```bash
+BLANK auth
+
+  Cloud Storage Mode
+  ──────────────────────────────────────
+  ? Select storage mode:
+  > public  - Files stored in BlankDrive/ folder (visible in Drive)
+    hidden  - Files stored in appDataFolder (not visible in Drive)
+```
+
+If you choose **public**, you'll also set a folder name:
+
+```bash
+  ? Enter folder name for public content: my-laptop
+
+  ✓ Cloud storage mode saved: public
+  ✓ Public folder saved: BlankDrive/my-laptop
+```
+
+### Changing Storage Mode
+
+Use the `settings` command to update your storage configuration:
+
+<CodeGroup>
+```bash Switch to Hidden
+BLANK settings --storage hidden
+
+  Settings
+
+  Cloud storage mode: public (BlankDrive/my-laptop)
+
+  Updated cloud storage mode to: hidden (appDataFolder)
+  Note: Existing cloud files are not migrated automatically.
+  New uploads will use the updated settings.
+```
+
+```bash Switch to Public
+BLANK settings --storage public
+
+  ? Enter folder name for public content: desktop
+
+  Updated cloud storage mode to: public (BlankDrive/)
+  Updated public folder path to: BlankDrive/desktop
+```
+
+```bash Interactive Settings
+BLANK settings
+
+  Cloud storage mode: hidden (appDataFolder)
+
+  ? Select storage mode:
+  > public
+    hidden
+```
+</CodeGroup>
+
+### Updating Folder Name (Public Mode)
+
+Change just the folder name without switching modes:
+
+```bash
+BLANK settings --folder work-laptop
+
+  Updated public folder path to: BlankDrive/work-laptop
+```
+
+Or update both at once:
+
+```bash
+BLANK settings --storage public --folder office
+```
+
+<Warning>
+  Changing storage mode or folder name does NOT automatically migrate existing files. New uploads use the new settings.
+</Warning>
+
+## Upload Behavior
+
+### File Upload
+
+Upload encrypted files to Google Drive:
+
+```bash
+BLANK upload <file>
+```
+
+**Public mode behavior:**
+- Prompts for folder name on each upload
+- Default is the saved folder name from settings
+- You can override to upload to a different folder
+
+**Example:**
+
+```bash
+BLANK upload passport.pdf
+
+  ? Enter folder name (or press Enter for 'my-laptop'): travel-docs
+
+  ✓ File encrypted
+  ✓ Uploaded to BlankDrive/travel-docs/
+```
+
+**Hidden mode behavior:**
+- No folder prompt (uses `appDataFolder` automatically)
+- All files go to the same hidden storage
+
+### File Chunking
+
+Large files are automatically chunked:
+
+- **Chunk size:** 20 MB per chunk
+- **Parallel uploads:** Up to 5 workers
+- **Progress tracking:** Real-time upload status
+
+**Example with chunking:**
+
+```bash
+BLANK upload large-video.mp4
+
+  File size: 150 MB
+  Chunks: 8
+
+  [████████████████████] 100% | 150.0 MB / 150.0 MB
+
+  ✓ Uploaded 8 chunks to BlankDrive/my-laptop/
+```
+
+## Download Behavior
+
+### File Download
+
+Download and decrypt files from Google Drive:
+
+```bash
+BLANK download [search]
+```
+
+**Adaptive concurrency:**
+
+BlankDrive adjusts parallel download workers based on available RAM:
+
+| Free RAM | Workers |
+|----------|--------|
+| > 2 GB   | 5      |
+| > 512 MB | 2      |
+| < 512 MB | 1      |
+
+**Example:**
+
+```bash
+BLANK download passport
+
+  Found: passport.pdf (10.2 MB, 1 chunk)
+
+  [████████████████████] 100% | 10.2 MB / 10.2 MB
+
+  ✓ Downloaded and decrypted
+  Saved to: ./passport.pdf
+```
+
+### Storage Mode Detection
+
+When downloading, BlankDrive:
+
+1. Checks your current storage mode setting
+2. Searches for encrypted chunks in that location
+3. Downloads and decrypts chunks in parallel
+4. Reassembles the original file
+
+<Info>
+  If you switched storage modes, files uploaded before the change remain in the old location. You may need to temporarily switch back to download them.
+</Info>
+
+## Sync Behavior
+
+### Manual Sync
+
+Sync vault entries to Google Drive:
+
+```bash
+BLANK sync
+```
+
+This uploads:
+- Encrypted vault index
+- Individual entry metadata
+- File chunks (if any files were uploaded)
+
+**What gets synced:**
+- New entries since last sync
+- Modified entries
+- Deletion markers (for entries deleted locally)
+
+**What doesn't sync:**
+- Large file content (must use `BLANK upload` explicitly)
+- OAuth credentials (always local-only)
+
+### Restore from Cloud
+
+Restore your vault on a new device:
+
+```bash
+BLANK init --restore
+```
+
+**Requirements:**
+- Same Google account
+- Correct master password
+- Correct storage mode and folder configuration
+
+**Restore process:**
+
+<Steps>
+  <Step title="Initialize restore mode">
+    ```bash
+    BLANK init --restore
+    ```
+  </Step>
+
+  <Step title="Set master password">
+    Enter the same master password used when creating the vault.
+  </Step>
+
+  <Step title="Authenticate with Google">
+    ```bash
+    BLANK auth
+    ```
+    Use the same storage mode (public/hidden) and folder name as the original vault.
+  </Step>
+
+  <Step title="Download vault data">
+    BlankDrive automatically downloads:
+    - Encrypted vault index
+    - Entry metadata
+    
+    File content must be downloaded individually with `BLANK download`.
+  </Step>
+</Steps>
+
+<Warning>
+  If you select the wrong storage mode or folder name during restore, the vault will appear empty (data exists but BlankDrive is looking in the wrong location).
+</Warning>
+
+## Folder Organization Strategies
+
+### Single Device
+
+**Recommended:** Hidden mode
+
+```bash
+BLANK settings --storage hidden
+```
+
+Minimal Drive clutter, automatic sync.
+
+### Multiple Devices (Shared Vault)
+
+**Recommended:** Public mode with a common folder
+
+```bash
+# On all devices:
+BLANK settings --storage public --folder shared-vault
+```
+
+All devices sync to `BlankDrive/shared-vault/`.
+
+### Multiple Devices (Separate Vaults)
+
+**Recommended:** Public mode with device-specific folders
+
+```bash
+# Laptop:
+BLANK settings --storage public --folder laptop
+
+# Desktop:
+BLANK settings --storage public --folder desktop
+
+# Phone (if mobile CLI):
+BLANK settings --storage public --folder phone
+```
+
+Each device maintains its own vault in Drive.
+
+### Organize by Purpose
+
+```bash
+# Work vault:
+BLANK settings --folder work
+
+# Personal vault:
+BLANK settings --folder personal
+```
+
+Switch between vaults by changing folder name.
+
+## Migration Between Modes
+
+<Warning>
+  BlankDrive does NOT automatically migrate files when you switch storage modes.
+</Warning>
+
+### Manual Migration Steps
+
+<Steps>
+  <Step title="Note current mode and folder">
+    ```bash
+    BLANK settings
+    # Cloud storage mode: public (BlankDrive/old-folder)
+    ```
+  </Step>
+
+  <Step title="Download all files">
+    ```bash
+    BLANK list --type files
+    # Download each file
+    BLANK download file1
+    BLANK download file2
+    # ... etc
+    ```
+  </Step>
+
+  <Step title="Switch to new mode">
+    ```bash
+    BLANK settings --storage hidden
+    # or
+    BLANK settings --storage public --folder new-folder
+    ```
+  </Step>
+
+  <Step title="Re-upload files">
+    ```bash
+    BLANK upload file1.pdf
+    BLANK upload file2.jpg
+    # ... etc
+    ```
+  </Step>
+
+  <Step title="Clean up old location (optional)">
+    Manually delete old encrypted files from Google Drive:
+    - For public mode: Go to Drive and delete `BlankDrive/old-folder/`
+    - For hidden mode: Use `BLANK auth --logout` then re-auth to clear app data
+  </Step>
+</Steps>
+
+## Storage Limits
+
+### Google Drive Quotas
+
+BlankDrive uses your Google Drive storage quota:
+
+- **Free tier:** 15 GB (shared with Gmail and Photos)
+- **Google One:** 100 GB, 200 GB, 2 TB plans available
+
+Encrypted files count against your quota at their encrypted size (slightly larger than original due to encryption overhead).
+
+### Encryption Overhead
+
+Each encrypted file adds:
+- **12 bytes** for IV (initialization vector)
+- **16 bytes** for authentication tag
+- **Minimal padding** for block alignment
+
+**Approximate overhead:** ~0.01% for large files, negligible for most use cases.
+
+## Security Considerations
+
+### Public Mode Security
+
+- Encrypted file names are **visible** in Drive (shows chunk IDs like `entry_abc123_chunk_0`)
+- File **content is encrypted** - unreadable without master password
+- Anyone with Drive access sees encrypted blobs, but can't decrypt them
+
+### Hidden Mode Security
+
+- Files are **not visible** in Drive web interface
+- Only accessible via apps with `drive.appdata` scope
+- Provides **obscurity** but relies on the same encryption as public mode
+
+<Note>
+  Security comes from encryption, not storage mode. Both modes use AES-256-GCM with Argon2id key derivation.
+</Note>
+
+### Trust Boundary
+
+- ✅ BlankDrive never sees your unencrypted data
+- ✅ Google sees encrypted blobs only
+- ✅ Encryption happens client-side before upload
+- ⚠️ If your device is compromised while vault is unlocked, data may be exposed
+- ⚠️ Losing master password = permanent data loss
+
+## Troubleshooting
+
+<Accordion title="Upload says success but file not visible in Drive">
+  **Cause:** You're in hidden mode (`appDataFolder`).
+
+  **Solution:**
+  ```bash
+  BLANK settings --storage public
+  ```
+  New uploads will be visible in `BlankDrive/` folder.
+</Accordion>
+
+<Accordion title="Can't download file after changing folder name">
+  **Cause:** File was uploaded to old folder, but BlankDrive is looking in new folder.
+
+  **Solution:**
+  ```bash
+  # Temporarily switch back to old folder
+  BLANK settings --folder old-folder-name
+  BLANK download myfile
+  
+  # Switch back to new folder
+  BLANK settings --folder new-folder-name
+  ```
+</Accordion>
+
+<Accordion title="Restore shows empty vault">
+  **Cause:** Incorrect storage mode or folder name during restore.
+
+  **Solution:**
+  1. Verify original storage mode (check Google Drive manually)
+  2. Run `BLANK settings` to check current mode
+  3. Update to match original: `BLANK settings --storage public --folder original-name`
+  4. Restart BlankDrive and try listing again
+</Accordion>
+
+## Configuration File
+
+Storage settings are saved at `~/.slasshy/cloud_storage_config.json`:
+
+```json
+{
+  "mode": "public",
+  "publicFolderName": "my-laptop"
+}
+```
+
+**Manual editing:** You can edit this file directly, but it's safer to use `BLANK settings`.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Vault Management" icon="vault" href="/guides/vault-management">
+    Learn to add, edit, and delete entries
+  </Card>
+  <Card title="Desktop App" icon="desktop" href="/guides/desktop-app">
+    Install the BlankDrive desktop application
+  </Card>
+</CardGroup>

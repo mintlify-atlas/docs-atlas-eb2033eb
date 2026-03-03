@@ -1,0 +1,501 @@
+---
+title: Vault Management
+description: Complete guide to managing passwords, notes, and files in your BlankDrive vault
+---
+
+BlankDrive stores all your data in an encrypted vault protected by your master password. This guide covers all vault operations.
+
+## Adding Entries
+
+### Add a Password Entry
+
+Use the `add` command to create a new password entry:
+
+```bash
+BLANK add
+```
+
+You'll be prompted for:
+
+- **Title** (required): A descriptive name like "GitHub Account"
+- **Username** (optional): Your username or email
+- **Password** (optional): The password (or generate one)
+- **URL** (optional): Associated website URL
+- **Notes** (optional): Additional details
+
+<CodeGroup>
+```bash Example: Manual Entry
+BLANK add
+# Title: GitHub Account
+# Username: johndoe@example.com
+# Password: mySecureP@ssw0rd
+# URL: https://github.com
+# Notes: Personal account
+```
+
+```bash Example: Generated Password
+BLANK add
+# Title: AWS Console
+# Username: admin@company.com
+# Password: [Choose "Generate strong password"]
+# URL: https://console.aws.amazon.com
+```
+</CodeGroup>
+
+<Info>
+  Entries are immediately encrypted with AES-256-GCM and saved to your local vault at `~/.slasshy/`.
+</Info>
+
+### Add a Note Entry
+
+Create encrypted secure notes for storing sensitive text:
+
+```bash
+BLANK note add
+```
+
+This will:
+1. Ask for a note title
+2. Open your default text editor for content
+3. Encrypt and save the note when you close the editor
+
+<CodeGroup>
+```bash Interactive
+BLANK note add
+# Note title: Server Credentials
+# [Editor opens]
+# Save and close to encrypt
+```
+
+```bash Shell Mode
+BLANK
+> note add
+```
+</CodeGroup>
+
+## Retrieving Entries
+
+### Get a Password
+
+Search and retrieve a password entry:
+
+```bash
+BLANK get [search]
+```
+
+**Search methods:**
+- By title: `BLANK get github`
+- Fuzzy search: `BLANK get ghb` (matches "GitHub Account")
+- No argument: Shows all entries to select from
+
+<CodeGroup>
+```bash Basic Retrieval
+BLANK get github
+
+  GitHub Account
+  ────────────────────────────────────────
+  Username: johndoe@example.com
+  Password: ************ (use --show-password to reveal)
+  URL: https://github.com
+  ────────────────────────────────────────
+  Created: 2026-01-15 10:30:00
+  Modified: 2026-02-01 14:22:00
+```
+
+```bash Show Password
+BLANK get github --show-password
+
+  GitHub Account
+  ────────────────────────────────────────
+  Username: johndoe@example.com
+  Password: mySecureP@ssw0rd
+  URL: https://github.com
+```
+
+```bash Copy to Clipboard
+BLANK get github --copy
+
+  Password copied to clipboard!
+  (Will be cleared in 30 seconds)
+```
+</CodeGroup>
+
+<Info>
+  Fuzzy search uses match quality scoring. Better matches appear first in the results.
+</Info>
+
+### View a Note
+
+Retrieve and display a secure note:
+
+```bash
+BLANK note view [search]
+```
+
+**Example:**
+
+```bash
+BLANK note view server
+
+  📝 Server Credentials
+  ────────────────────────────────────────────────────────────
+
+  Production Server: 192.168.1.100
+  SSH Key: ~/.ssh/prod_server_rsa
+  Root Password: [REDACTED]
+
+  ────────────────────────────────────────────────────────────
+  Created:  2026-01-20 09:15:00
+  Modified: 2026-01-20 09:15:00
+  Length:   128 characters
+```
+
+## Listing Entries
+
+### List All Entries
+
+```bash
+BLANK list
+```
+
+This shows all passwords, notes, and files organized by type:
+
+```bash
+  Passwords (5)
+  ────────────────────────────────────────────────────────────
+  1.    🔐 GitHub Account                    3/1/2026
+  2. ⭐  🔐 [Work] AWS Console                3/2/2026
+  3.    🔐 Email Account                     2/28/2026
+  4.    🔐 Bank Login                        2/15/2026
+  5.    🔐 WiFi Password                     1/10/2026
+
+  Notes (2)
+  ────────────────────────────────────────────────────────────
+  1.    📝 Server Credentials                1/20/2026
+  2.    📝 Meeting Notes                     1/18/2026
+
+  Files (3)
+  ────────────────────────────────────────────────────────────
+  1. ⭐  📕 passport.pdf                10.2 MB    2/10/2026
+  2.    🖼️ family-photo.jpg            3.5 MB     1/25/2026
+  3.    📄 contract.docx               156 KB     1/15/2026
+  ────────────────────────────────────────────────────────────
+  Total: 10 entries (5 passwords, 2 notes, 3 files)
+```
+
+### Filter Entries
+
+<CodeGroup>
+```bash By Type
+# Show only passwords
+BLANK list --type passwords
+
+# Show only notes
+BLANK list --type notes
+
+# Show only files
+BLANK list --type files
+```
+
+```bash By Category
+BLANK list --category work
+```
+
+```bash By Title
+BLANK list --filter github
+```
+</CodeGroup>
+
+### List Notes Only
+
+```bash
+BLANK note list
+```
+
+## Editing Entries
+
+### Edit a Password Entry
+
+```bash
+BLANK edit [search]
+```
+
+**Interactive workflow:**
+
+1. Select the entry (if multiple matches)
+2. Choose which fields to edit (checkbox selection)
+3. Enter new values for selected fields
+4. Confirm changes
+
+<CodeGroup>
+```bash Update Password Only
+BLANK edit github
+
+# Current Values for "GitHub Account":
+# ──────────────────────────────────────────────────
+# Title:    GitHub Account
+# Username: johndoe@example.com
+# Password: ************
+# URL:      https://github.com
+# ──────────────────────────────────────────────────
+
+# Select fields to edit:
+# [x] Password (currently set)
+
+# New password:
+# > 🔐 Generate strong password
+#   📝 Generate passphrase
+#   ✏️  Enter manually
+```
+
+```bash Update Multiple Fields
+BLANK edit aws
+
+# Select fields to edit:
+# [x] Title (current: AWS Console)
+# [x] Username (current: admin@company.com)
+# [ ] Password (currently set)
+# [ ] URL (current: https://console.aws.amazon.com)
+# [ ] Notes (not set)
+```
+</CodeGroup>
+
+<Note>
+  Password changes are tracked. The `passwordLastChanged` field is automatically updated.
+</Note>
+
+### Edit a Note
+
+```bash
+BLANK note edit [search]
+```
+
+Choose what to edit:
+- **Content** - Opens editor with current content
+- **Title** - Change the note's title
+- **Both** - Update title and content
+
+## Favorites
+
+### Toggle Favorite Status
+
+Mark important entries with a star:
+
+```bash
+BLANK favorite [search]
+```
+
+**Example:**
+
+```bash
+BLANK favorite github
+
+  ⭐ "GitHub Account" added to favorites!
+```
+
+Run again to remove from favorites:
+
+```bash
+BLANK favorite github
+
+  ✓ "GitHub Account" removed from favorites.
+```
+
+### List Favorites Only
+
+```bash
+BLANK favorites
+```
+
+Shows all entries marked as favorites:
+
+```bash
+  ⭐ Favorite Entries
+
+  Found 2 favorites:
+
+  🔐 ⭐ AWS Console (3/2/2026)
+  📄 ⭐ passport.pdf (2/10/2026)
+```
+
+## Deleting Entries
+
+### Delete an Entry
+
+```bash
+BLANK delete [search]
+```
+
+**By title:**
+
+```bash
+BLANK delete github
+
+  Delete "GitHub Account"? This cannot be undone.
+  > Yes
+
+  ✓ Entry deleted
+
+  "GitHub Account" has been deleted from local and cloud.
+```
+
+**By number (from list):**
+
+```bash
+BLANK list
+# 3.    🔐 Email Account
+
+BLANK delete 3
+```
+
+<Warning>
+  Deletion is permanent. The entry is removed from both your local vault and Google Drive (if synced).
+</Warning>
+
+### Force Delete (Skip Confirmation)
+
+```bash
+BLANK delete github --force
+```
+
+Use with caution - this skips the confirmation prompt.
+
+## Advanced Operations
+
+### Search with Fuzzy Matching
+
+BlankDrive uses fuzzy search to find entries even with typos:
+
+```bash
+BLANK get ghb
+
+  Found 3 entries:
+
+  🟢 EXCELLENT  GitHub Account
+  🟡 GOOD       GitLab Login
+  🔵 FAIR       Bitbucket Access
+```
+
+**Match quality indicators:**
+- 🟢 EXCELLENT - Very close match
+- 🔵 STRONG - Strong match
+- 🟡 GOOD - Good match
+- 🟠 FAIR - Fair match
+- 🔴 WEAK - Weak match
+
+### Working with Categories
+
+When adding entries, you can optionally specify a category for better organization:
+
+```bash
+BLANK add
+# Title: Office WiFi
+# Category: work
+```
+
+Filter by category:
+
+```bash
+BLANK list --category work
+```
+
+### Audit and Security
+
+Check password health:
+
+```bash
+BLANK audit
+```
+
+This shows:
+- Weak passwords
+- Reused passwords
+- Passwords older than 90 days
+
+Check all entries (including strong passwords):
+
+```bash
+BLANK audit --all
+```
+
+### Vault Status
+
+View vault information:
+
+```bash
+BLANK status
+```
+
+Shows:
+- Vault location
+- Lock status
+- Number of entries
+- Google Drive connection status
+- Storage mode
+
+## Entry Types
+
+BlankDrive supports three entry types:
+
+| Type | Icon | Commands | Description |
+|------|------|----------|-------------|
+| Password | 🔐 | `add`, `get`, `edit`, `delete` | Username/password credentials |
+| Note | 📝 | `note add`, `note view`, `note edit` | Encrypted text notes |
+| File | 📄📕🖼️ | `upload`, `download`, `delete` | Encrypted file storage |
+
+<Info>
+  File management is covered in the [Cloud Storage guide](/guides/cloud-storage).
+</Info>
+
+## Notes and Metadata
+
+### Entry Metadata
+
+All entries include:
+- **ID**: Unique identifier (auto-generated)
+- **Title**: Display name
+- **Created**: Timestamp of creation
+- **Modified**: Last modification time
+- **Favorite**: Boolean flag
+- **Entry Type**: `password`, `note`, or `file`
+
+### Password-specific Fields
+
+- **Username**: Associated username/email
+- **Password**: Encrypted password
+- **URL**: Website or service URL
+- **Notes**: Free-form text notes
+- **Password Last Changed**: Timestamp for password rotation tracking
+
+### Encryption Details
+
+- **Algorithm**: AES-256-GCM
+- **Key Derivation**: Argon2id (timeCost=3, memoryCost=64MB, parallelism=4)
+- **AAD (Additional Authenticated Data)**: Entry ID for binding
+- **Sub-keys**: HKDF-SHA256 with context-specific derivation
+
+## Local Storage
+
+Vault data is stored at:
+
+```
+~/.slasshy/
+├── vault_metadata.enc          # Encrypted vault index
+├── entries/                    # Individual encrypted entries
+│   ├── <entry-id>.enc
+│   └── ...
+├── drive_token.enc             # Google Drive tokens
+├── google_oauth_credentials.enc # OAuth credentials
+└── cloud_storage_config.json   # Storage settings
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Cloud Storage" icon="cloud-arrow-up" href="/guides/cloud-storage">
+    Sync your vault to Google Drive
+  </Card>
+  <Card title="Web UI" icon="browser" href="/guides/web-ui">
+    Use the local web interface
+  </Card>
+</CardGroup>

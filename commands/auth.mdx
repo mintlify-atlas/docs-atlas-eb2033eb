@@ -1,0 +1,201 @@
+---
+title: 'auth'
+description: 'Authenticate with Google Drive via OAuth'
+---
+
+Authenticate with Google Drive using your own OAuth client credentials. This enables syncing your encrypted vault entries to Google Drive for backup and cross-device access.
+
+## Usage
+
+```bash
+BLANK auth [options]
+```
+
+## Options
+
+<ParamField path="--setup" type="boolean" default="false">
+  Set or update your Google OAuth Client ID and Client Secret. Use this when:
+  - First-time authentication
+  - Changing OAuth credentials
+  - Fixing invalid or expired credentials
+</ParamField>
+
+<ParamField path="--logout" type="boolean" default="false">
+  Disconnect from Google Drive and remove stored OAuth tokens. Clears all authentication data from the vault.
+</ParamField>
+
+## Examples
+
+### First-time authentication
+
+Authenticate with Google Drive using your OAuth credentials:
+
+```bash
+BLANK auth
+```
+
+<CodeGroup>
+```bash Output
+  Google Drive Authentication
+
+  Master password: ********
+
+✓ Vault unlocked
+
+  Cloud storage mode saved: hidden
+
+  Google OAuth Client ID: ************************************
+  Google OAuth Client Secret: ****************************
+
+✓ Google OAuth credentials saved.
+  Stored locally in encrypted form.
+
+  Using Google OAuth Client ID: 123456*****.apps.googleusercontent.com
+  Use "BLANK auth --setup" to update credentials.
+
+  Opening browser for Google authentication...
+
+✓ Google Drive connected
+
+  Successfully connected to Google Drive!
+  Your tokens are encrypted and stored locally.
+
+  You can now use "BLANK sync" to upload your entries.
+```
+</CodeGroup>
+
+### Update OAuth credentials
+
+Update your Google Client ID and Client Secret:
+
+```bash
+BLANK auth --setup
+```
+
+This forces re-entry of credentials even if they're already configured.
+
+### Logout from Google Drive
+
+Disconnect and remove all Google Drive tokens:
+
+```bash
+BLANK auth --logout
+```
+
+<CodeGroup>
+```bash Output
+  Google Drive Authentication
+
+✓ Logged out from Google Drive
+
+  Your Google Drive tokens have been removed.
+```
+</CodeGroup>
+
+## Behavior
+
+### Authentication flow
+
+1. **Vault check**: Verifies that a vault exists (required for token encryption)
+2. **Vault unlock**: Prompts for master password if vault is locked
+3. **Cloud storage mode**: Configures storage mode (hidden/public) if not set
+4. **OAuth credentials**: Prompts for Client ID and Secret if not configured or if `--setup` is used
+5. **Browser OAuth flow**: Opens browser for Google authorization
+6. **Token storage**: Encrypts and stores OAuth tokens in the vault
+
+### Cloud storage modes
+
+During first-time authentication, you'll choose a storage mode:
+
+- **Hidden mode**: Files stored in `appDataFolder` (not visible in Google Drive UI)
+- **Public mode**: Files stored in a visible `BlankDrive/<folder-name>` folder
+
+### OAuth credential masking
+
+Client IDs are displayed with partial masking for security:
+
+```
+Using Google OAuth Client ID: 123456*****.apps.googleusercontent.com
+```
+
+### Re-authentication
+
+If already authenticated, you'll be asked to confirm:
+
+```bash
+  Already authenticated with Google Drive.
+  Re-authenticate? (y/N)
+```
+
+<Note>
+  BlankDrive uses OAuth 2.0 with your own Google Cloud credentials. You must create OAuth credentials in Google Cloud Console before using this command.
+</Note>
+
+## Error handling
+
+### No vault found
+
+```bash
+  No vault found. Run "BLANK init" first.
+  The vault is needed to securely store your Google Drive tokens.
+```
+
+Solution: Run `BLANK init` to create a vault first.
+
+### Invalid OAuth credentials
+
+```bash
+✗ Authentication failed
+
+  Your saved Google OAuth credentials are missing or invalid.
+  Please enter your Google Client ID and Client Secret again.
+```
+
+The command will automatically prompt for new credentials and retry authentication.
+
+### Redirect URI mismatch
+
+```bash
+✗ Authentication failed
+
+  OAuth callback did not complete.
+  Likely cause: redirect_uri_mismatch.
+  Fix: Create Google OAuth credentials as "Desktop app" (not "Web application").
+  Then run: BLANK auth --setup
+```
+
+Solution: Recreate your OAuth credentials in Google Cloud Console as a "Desktop app" type.
+
+### Vault unlock failure
+
+```bash
+✗ Failed to unlock vault
+  Incorrect password
+```
+
+Solution: Enter the correct master password.
+
+<Warning>
+  **OAuth credential security**: Your Client ID and Client Secret are stored encrypted in the vault. Never share these credentials. They allow access to your Google Drive data.
+</Warning>
+
+## Setting up OAuth credentials
+
+Before using `BLANK auth`, create OAuth credentials in Google Cloud Console:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project (or select existing)
+3. Enable the Google Drive API
+4. Create OAuth 2.0 credentials:
+   - Application type: **Desktop app** (not Web application)
+   - Note the Client ID and Client Secret
+5. Add scopes:
+   - `https://www.googleapis.com/auth/drive.appdata` (for hidden mode)
+   - `https://www.googleapis.com/auth/drive.file` (for public mode)
+
+## Related commands
+
+- [`init`](/commands/init) - Initialize vault (required before auth)
+
+- [`status`](/commands/status) - Check Google Drive connection status
+- [`settings`](/commands/settings) - Manage cloud storage mode

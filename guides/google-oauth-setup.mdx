@@ -1,0 +1,252 @@
+---
+title: Google OAuth Setup
+description: Step-by-step guide to configure Google OAuth credentials and connect BlankDrive to Google Drive
+---
+
+BlankDrive uses your own Google OAuth Desktop credentials to connect to Google Drive. This ensures that your data flows directly between your device and your Google account, with no third-party backend.
+
+## Prerequisites
+
+- A Google account
+- A Google Cloud project (can be created during setup)
+- Node.js 18+ installed
+- BlankDrive CLI installed (`npm install -g blankdrive`)
+
+## Step-by-Step Setup
+
+<Steps>
+  <Step title="Create or select a Google Cloud project">
+    Navigate to the [Google Cloud Console](https://console.cloud.google.com/).
+
+    - If you don't have a project, click **Create Project**
+    - Give it a name like "BlankDrive Personal"
+    - Click **Create**
+
+    <Note>
+      You can use an existing project if you prefer, but creating a dedicated one for BlankDrive is recommended.
+    </Note>
+  </Step>
+
+  <Step title="Enable Google Drive API">
+    Open the [Google Drive API library page](https://console.cloud.google.com/apis/library/drive.googleapis.com).
+
+    - Make sure your project is selected in the top navigation
+    - Click **Enable**
+    - Wait for the API to be enabled (usually takes a few seconds)
+
+    <Info>
+      BlankDrive requires `drive.file` and `drive.appdata` scopes to manage encrypted files in your Drive.
+    </Info>
+  </Step>
+
+  <Step title="Configure OAuth consent screen">
+    Go to the [OAuth consent screen configuration](https://console.cloud.google.com/apis/credentials/consent).
+
+    **User Type:**
+    - Select **External** if you're an individual user
+    - Select **Internal** if you're using a Google Workspace organization
+
+    **App Information:**
+    - App name: `BlankDrive` (or any name you prefer)
+    - User support email: Your email address
+    - Developer contact: Your email address
+
+    **Scopes:**
+    - You can skip adding scopes manually (BlankDrive will request them at runtime)
+
+    **Test Users:**
+    - If your app is not published, add your Google account email as a test user
+    - Click **Add Users** and enter your email
+
+    <Warning>
+      If you don't add yourself as a test user and your app is unpublished, you'll see an "Access blocked" error during authentication.
+    </Warning>
+  </Step>
+
+  <Step title="Create OAuth Client ID (Desktop app)">
+    Navigate to the [Credentials page](https://console.cloud.google.com/apis/credentials).
+
+    - Click **Create Credentials** → **OAuth client ID**
+    - Application type: Select **Desktop app**
+    - Name: `BlankDrive CLI` (or any descriptive name)
+    - Click **Create**
+
+    <Warning>
+      **Critical:** You must select **Desktop app**, NOT "Web application". BlankDrive uses loopback redirect (`http://127.0.0.1:<port>`) which is only supported for Desktop app credentials.
+    </Warning>
+
+    After creation, you'll see a dialog with:
+    - **Client ID** (looks like `123456789-abc...xyz.apps.googleusercontent.com`)
+    - **Client Secret** (looks like `GOCSPX-abc...xyz`)
+
+    Keep this dialog open or download the JSON file. You'll need these values in the next step.
+  </Step>
+
+  <Step title="Run BLANK auth">
+    Open your terminal and initialize your vault first (if you haven't already):
+
+    ```bash
+    blankdrive init
+    ```
+
+    Then run the auth command:
+
+    ```bash
+    blankdrive auth
+    ```
+
+    or using the shorthand:
+
+    ```bash
+    BLANK auth
+    ```
+
+    **You'll be prompted for:**
+
+    1. **Storage mode** (public or hidden) - [see Cloud Storage guide](/guides/cloud-storage)
+    2. **Folder name** (if public mode)
+    3. **Google OAuth Client ID** - paste the Client ID from Step 4
+    4. **Google OAuth Client Secret** - paste the Client Secret from Step 4
+
+    <Info>
+      Your OAuth credentials are encrypted with your vault master password and stored locally at `~/.slasshy/google_oauth_credentials.enc`.
+    </Info>
+  </Step>
+
+  <Step title="Complete OAuth flow in browser">
+    BlankDrive will:
+
+    1. Start a local callback server on `127.0.0.1` (random port)
+    2. Generate a PKCE challenge
+    3. Open your default browser to Google's consent page
+
+    In the browser:
+    - Sign in to your Google account (if not already signed in)
+    - Review the requested permissions
+    - Click **Allow**
+
+    The browser will redirect to `http://127.0.0.1:<port>` and BlankDrive will automatically capture the authorization code.
+
+    You should see:
+
+    ```
+    ✓ Google Drive connected
+
+    Successfully connected to Google Drive!
+    Your tokens are encrypted and stored locally.
+
+    You can now use "BLANK sync" to upload your entries.
+    ```
+  </Step>
+</Steps>
+
+## OAuth Flow Details
+
+BlankDrive implements the OAuth 2.0 flow for native applications:
+
+1. **Local loopback server** starts on `127.0.0.1` with a random port
+2. **PKCE (Proof Key for Code Exchange)** is used for enhanced security
+3. **Authorization code** is exchanged for access and refresh tokens
+4. **Tokens are encrypted** using your vault's master key and stored at `~/.slasshy/drive_token.enc`
+5. **Automatic token refresh** happens when access tokens expire
+
+<Info>
+  Reference: [Google OAuth 2.0 for Native Apps](https://developers.google.com/identity/protocols/oauth2/native-app)
+</Info>
+
+## Updating Credentials
+
+If you need to change your OAuth Client ID or Secret:
+
+```bash
+BLANK auth --setup
+```
+
+This will prompt you to re-enter your credentials and restart the OAuth flow.
+
+## Re-authenticating
+
+If you're already authenticated and want to re-authorize:
+
+```bash
+BLANK auth
+```
+
+You'll be asked if you want to re-authenticate. Confirm to proceed.
+
+## Logging Out
+
+To disconnect from Google Drive and remove stored tokens:
+
+```bash
+BLANK auth --logout
+```
+
+This removes the encrypted token file but keeps your OAuth credentials for easy re-authentication.
+
+## Troubleshooting
+
+<Accordion title="redirect_uri_mismatch error">
+  **Cause:** Your OAuth client is configured as "Web application" instead of "Desktop app".
+
+  **Solution:**
+  1. Go to [Google Cloud Console Credentials](https://console.cloud.google.com/apis/credentials)
+  2. Delete the existing OAuth client (or create a new one)
+  3. Create a new OAuth client ID with type **Desktop app**
+  4. Run `BLANK auth --setup` and enter the new credentials
+</Accordion>
+
+<Accordion title="Access blocked / unverified app">
+  **Cause:** Your Google account is not added as a test user in the OAuth consent screen.
+
+  **Solution:**
+  1. Go to [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent)
+  2. Scroll to **Test users**
+  3. Click **Add Users**
+  4. Enter your Google account email
+  5. Try `BLANK auth` again
+</Accordion>
+
+<Accordion title="invalid_client error">
+  **Cause:** The Client ID or Client Secret is incorrect or has been deleted.
+
+  **Solution:**
+  1. Verify your credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+  2. Run `BLANK auth --setup` to re-enter them
+  3. If the OAuth client was deleted, create a new one (Desktop app type)
+</Accordion>
+
+<Accordion title="OAuth flow times out">
+  **Cause:** The browser didn't redirect back to the local callback server.
+
+  **Solution:**
+  - Check your firewall settings (port 127.0.0.1 should allow local connections)
+  - Try running `BLANK auth` again
+  - If you're using a remote/headless server, this won't work (OAuth requires a local browser)
+</Accordion>
+
+## Security Notes
+
+- **No backend server:** OAuth runs entirely on your local machine
+- **Encrypted storage:** Credentials and tokens are encrypted with AES-256-GCM
+- **PKCE flow:** Uses Proof Key for Code Exchange for protection against authorization code interception
+- **Local-only:** Tokens never leave your device except when making API calls directly to Google
+
+## What's Stored Locally
+
+| File | Location | Contents |
+|------|----------|----------|
+| OAuth credentials | `~/.slasshy/google_oauth_credentials.enc` | Encrypted Client ID and Secret |
+| Drive tokens | `~/.slasshy/drive_token.enc` | Encrypted access and refresh tokens |
+| Storage config | `~/.slasshy/cloud_storage_config.json` | Storage mode and folder settings |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Cloud Storage Modes" icon="cloud" href="/guides/cloud-storage">
+    Learn about public vs hidden storage
+  </Card>
+  <Card title="Vault Management" icon="lock" href="/guides/vault-management">
+    Add and manage vault entries
+  </Card>
+</CardGroup>

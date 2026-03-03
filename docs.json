@@ -1,122 +1,127 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "BlankDrive",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#4B0082",
+    "light": "#4B0082",
+    "dark": "#4B0082"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/SlasshyOverhere/BlankDrive"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/SlasshyOverhere/BlankDrive"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
+              "installation",
               "quickstart",
-              "development"
+              "architecture"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Guides",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "guides/google-oauth-setup",
+              "guides/vault-management",
+              "guides/cloud-storage",
+              "guides/desktop-app",
+              "guides/web-ui"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Security",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "security/encryption",
+              "security/key-derivation",
+              "security/trust-model"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "CLI Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core Commands",
             "pages": [
-              "api-reference/introduction"
+              "commands/init",
+              "commands/auth",
+              "commands/lock",
+              "commands/status"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Vault Operations",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "commands/add",
+              "commands/get",
+              "commands/list",
+              "commands/edit",
+              "commands/delete"
+            ]
+          },
+          {
+            "group": "File Management",
+            "pages": [
+              "commands/upload",
+              "commands/download"
+            ]
+          },
+          {
+            "group": "Notes & Favorites",
+            "pages": [
+              "commands/note",
+              "commands/favorite",
+              "commands/favorites"
+            ]
+          },
+          {
+            "group": "Security Tools",
+            "pages": [
+              "commands/generate",
+              "commands/audit"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "commands/settings",
+              "commands/web",
+              "commands/desktop",
+              "commands/update",
+              "commands/version",
+              "commands/destruct"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Additional Info",
+            "pages": [
+              "troubleshooting",
+              "faq",
+              "changelog"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

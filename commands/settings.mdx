@@ -1,0 +1,158 @@
+---
+title: "settings"
+description: "Configure BlankDrive cloud storage mode and public folder settings"
+---
+
+Manage application settings for cloud storage mode and public folder configuration.
+
+## Usage
+
+```bash
+BLANK settings [options]
+```
+
+## Overview
+
+The `settings` command allows you to configure how BlankDrive stores encrypted data in Google Drive:
+
+- **Hidden mode**: Stores encrypted files in Google Drive's app data folder (invisible to users)
+- **Public mode**: Stores encrypted files in a visible folder under `BlankDrive/[folder-name]`
+
+When run without options, the command displays current settings and prompts for changes interactively.
+
+## Options
+
+<ParamField path="--storage" type="string">
+  Cloud storage mode: `hidden` or `public`
+  
+  - `hidden`: Store in Google Drive app data (hidden from user)
+  - `public`: Store in visible `BlankDrive/` folder
+  
+  When not specified, the command prompts interactively.
+</ParamField>
+
+<ParamField path="--folder" type="string">
+  Public folder name under `BlankDrive/`
+  
+  Required when switching to or using public mode. The folder name:
+  - Must be non-empty
+  - Cannot contain `/` or `\` characters
+  - Is stored under `BlankDrive/[folder-name]` in Google Drive
+  
+  When not specified in public mode, the command prompts for it.
+</ParamField>
+
+## Examples
+
+### Interactive Configuration
+
+View current settings and change them interactively:
+
+```bash
+BLANK settings
+```
+
+```
+  Settings
+
+  Cloud storage mode: Hidden (Google Drive app data)
+  
+  [Interactive prompts follow...]
+```
+
+### Set Storage Mode Non-Interactively
+
+Switch to hidden mode:
+
+```bash
+BLANK settings --storage hidden
+```
+
+```
+  Settings
+
+  Cloud storage mode: Hidden (Google Drive app data)
+
+  Updated cloud storage mode to: Hidden (Google Drive app data)
+  Note: Existing cloud files are not migrated automatically.
+  New uploads will use the updated settings.
+```
+
+### Configure Public Mode with Folder
+
+Switch to public mode with a custom folder name:
+
+```bash
+BLANK settings --storage public --folder MySecureFiles
+```
+
+```
+  Settings
+
+  Cloud storage mode: Hidden (Google Drive app data)
+
+  Updated cloud storage mode to: Public (BlankDrive folder)
+  Updated public folder path to: BlankDrive/MySecureFiles
+  Note: Existing cloud files are not migrated automatically.
+  New uploads will use the updated settings.
+```
+
+### Update Public Folder Only
+
+Change the public folder name without changing storage mode:
+
+```bash
+BLANK settings --folder WorkVault
+```
+
+```
+  Settings
+
+  Cloud storage mode: Public (BlankDrive folder)
+  Public folder: BlankDrive/MySecureFiles
+
+  Updated public folder path to: BlankDrive/WorkVault
+  Note: Existing cloud files are not migrated automatically.
+  New uploads will use the updated settings.
+```
+
+## Current Settings Display
+
+The command always displays current settings before making changes:
+
+- **Cloud storage mode**: Shows whether using hidden or public mode
+- **Public folder**: Displayed only when in public mode, shows the current folder path
+
+## Important Notes
+
+<Warning>
+  **No Automatic Migration**: Changing settings does not migrate existing cloud files. Only new uploads will use the updated configuration.
+</Warning>
+
+- The settings persist across CLI sessions
+- In public mode, the folder appears under `BlankDrive/` in your Google Drive
+- In hidden mode, files are stored in Google Drive's application data folder and are not visible through the Drive interface
+- Invalid folder names (containing `/` or `\`) are rejected with an error message
+
+## Error Messages
+
+**Invalid storage mode:**
+```
+  Invalid storage mode. Use "hidden" or "public".
+```
+
+**Invalid folder name:**
+```
+  Invalid folder name. It must be non-empty and cannot include "/" or "\\".
+```
+
+**No changes:**
+```
+  No changes made.
+```
+
+## Related Commands
+
+- [auth](/commands/auth) - Set up Google Drive authentication
+- [upload](/commands/upload) - Upload files using current settings
+- [status](/commands/status) - View vault and cloud sync status

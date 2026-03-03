@@ -1,0 +1,130 @@
+---
+title: 'lock'
+description: 'Lock the vault and clear keys from memory'
+---
+
+Lock the vault and clear all encryption keys from memory. This secures your vault when you're done working with it.
+
+## Usage
+
+```bash
+BLANK lock
+```
+
+## Options
+
+This command has no options.
+
+## Examples
+
+### Lock the vault
+
+```bash
+BLANK lock
+```
+
+<CodeGroup>
+```bash Output
+  Vault locked. All keys cleared from memory.
+```
+</CodeGroup>
+
+### Attempting to lock when already locked
+
+```bash
+BLANK lock
+```
+
+<CodeGroup>
+```bash Output
+  Vault is already locked.
+```
+</CodeGroup>
+
+## Behavior
+
+### What happens when you lock
+
+1. **Audit logging**: Logs a `vault_locked` event to the audit log (before locking)
+2. **Key clearing**: Removes all encryption keys from memory
+3. **Drive disconnection**: Disconnects from Google Drive session
+4. **Audit state reset**: Clears in-memory audit state
+
+### Security implications
+
+Locking the vault:
+- Prevents access to encrypted entries without re-entering the master password
+- Clears sensitive cryptographic material from RAM
+- Closes the Google Drive connection
+- Requires re-authentication for the next operation
+
+<Note>
+  After locking, you'll need to enter your master password for any command that accesses vault data (like `get`, `list`, `add`, etc.).
+</Note>
+
+## When to use lock
+
+### Recommended scenarios
+
+- **Leaving your computer**: Lock before stepping away
+- **Switching users**: Lock before another user accesses the system
+- **Suspicious activity**: Lock immediately if you suspect unauthorized access
+- **End of session**: Lock when finished managing passwords
+
+### Automatic locking
+
+BlankDrive does not automatically lock. The vault remains unlocked until you:
+- Explicitly run `BLANK lock`
+- Close the terminal session
+- Restart your computer
+
+## Error handling
+
+### Already locked
+
+```bash
+  Vault is already locked.
+```
+
+No action needed. The vault is already in a locked state.
+
+## Implementation details
+
+From `src/cli/commands/lock.ts:6-20`:
+
+```typescript
+export async function lockCommand(): Promise<void> {
+  if (!isUnlocked()) {
+    console.log(chalk.yellow('\n  Vault is already locked.\n'));
+    return;
+  }
+
+  // Log before locking (since we need the vault to be unlocked to encrypt the log)
+  await logAuditEvent('vault_locked');
+
+  lock();
+  disconnectDrive();
+  resetAuditState();
+
+  console.log(chalk.green('\n  Vault locked. All keys cleared from memory.\n'));
+}
+```
+
+### Key functions
+
+- `isUnlocked()`: Check if vault is currently unlocked
+- `lock()`: Clear encryption keys from memory
+- `disconnectDrive()`: Close Google Drive connection
+- `resetAuditState()`: Clear in-memory audit data
+- `logAuditEvent()`: Record the lock event before clearing keys
+
+<Warning>
+  **Memory security**: Locking clears keys from memory, but sensitive data may remain in swap/page files. For maximum security, use full-disk encryption on your system.
+</Warning>
+
+## Related commands
+
+- [`status`](/commands/status) - Check if vault is locked or unlocked
+- [`init`](/commands/init) - Initialize a new vault
+- [`get`](/commands/get) - Unlocks vault automatically if locked
+- [`add`](/commands/add) - Unlocks vault automatically if locked

@@ -1,0 +1,294 @@
+---
+title: 'status'
+description: 'Show vault and sync status'
+---
+
+Display comprehensive status information about your BlankDrive vault, including initialization state, lock status, entry count, and Google Drive sync information.
+
+## Usage
+
+```bash
+BLANK status
+```
+
+## Options
+
+This command has no options.
+
+## Examples
+
+### Vault not initialized
+
+```bash
+BLANK status
+```
+
+<CodeGroup>
+```bash Output
+  BlankDrive Vault Status
+
+  Vault:      Not initialized
+
+  Run "BLANK init" to create a vault.
+```
+</CodeGroup>
+
+### Vault locked
+
+```bash
+BLANK status
+```
+
+<CodeGroup>
+```bash Output
+  BlankDrive Vault Status
+
+  Vault:      Initialized
+  Location:   /home/user/.blankdrive/vault
+  Status:     Locked
+
+  Google Drive
+  ──────────────────────────────
+  Connected:  No
+```
+</CodeGroup>
+
+### Vault unlocked with Google Drive connected
+
+```bash
+BLANK status
+```
+
+<CodeGroup>
+```bash Output
+  BlankDrive Vault Status
+
+  Vault:      Initialized
+  Location:   /home/user/.blankdrive/vault
+  Status:     Unlocked
+  Entries:    23
+  Created:    1/15/2026, 10:30:45 AM
+  Last sync:  3/3/2026, 2:14:22 PM
+
+  Google Drive
+  ──────────────────────────────
+  Connected:  Yes
+  Mode:       Hidden (appDataFolder)
+  Pending:    All synced
+```
+</CodeGroup>
+
+### Public cloud storage mode
+
+```bash
+BLANK status
+```
+
+<CodeGroup>
+```bash Output
+  BlankDrive Vault Status
+
+  Vault:      Initialized
+  Location:   /home/user/.blankdrive/vault
+  Status:     Unlocked
+  Entries:    42
+  Created:    12/1/2025, 8:15:30 AM
+  Last sync:  3/2/2026, 5:42:18 PM
+
+  Google Drive
+  ──────────────────────────────
+  Connected:  Yes
+  Mode:       Public (BlankDrive folder)
+  Folder:     BlankDrive/vault-backup
+  Pending:    All synced
+```
+</CodeGroup>
+
+### Pending uploads
+
+```bash
+BLANK status
+```
+
+<CodeGroup>
+```bash Output
+  BlankDrive Vault Status
+
+  Vault:      Initialized
+  Location:   /home/user/.blankdrive/vault
+  Status:     Unlocked
+  Entries:    15
+  Created:    2/10/2026, 3:22:10 PM
+  Last sync:  Never
+
+  Google Drive
+  ──────────────────────────────
+  Connected:  Yes
+  Mode:       Hidden (appDataFolder)
+  Pending:    5 entries need sync
+```
+</CodeGroup>
+
+## Status fields
+
+### Vault information
+
+<ParamField path="Vault" type="string">
+  Initialization state:
+  - **Initialized**: Vault exists and is ready to use
+  - **Not initialized**: No vault found, run `BLANK init`
+</ParamField>
+
+<ParamField path="Location" type="string">
+  Filesystem path to the vault directory. Typically `~/.blankdrive/vault/` or `%USERPROFILE%\.blankdrive\vault\` on Windows.
+</ParamField>
+
+<ParamField path="Status" type="string">
+  Lock state:
+  - **Unlocked**: Vault is decrypted and accessible
+  - **Locked**: Vault is encrypted, requires master password
+</ParamField>
+
+<ParamField path="Entries" type="number">
+  Total number of entries in the vault (passwords, files, notes). Only shown when unlocked.
+</ParamField>
+
+<ParamField path="Created" type="datetime">
+  Timestamp when the vault was first initialized. Only shown when unlocked.
+</ParamField>
+
+<ParamField path="Last sync" type="datetime">
+  Timestamp of the most recent successful sync with Google Drive. Shows "Never" if vault has not been synced. Only shown when unlocked.
+</ParamField>
+
+### Google Drive information
+
+<ParamField path="Connected" type="boolean">
+  Google Drive connection state:
+  - **Yes**: Authenticated and connected
+  - **No**: Not authenticated, run `BLANK auth`
+</ParamField>
+
+<ParamField path="Mode" type="string">
+  Cloud storage mode:
+  - **Hidden (appDataFolder)**: Files stored in hidden Google Drive app storage
+  - **Public (BlankDrive folder)**: Files stored in visible `BlankDrive/` folder
+</ParamField>
+
+<ParamField path="Folder" type="string">
+  Public folder path (only shown in public mode). Example: `BlankDrive/vault-backup`
+</ParamField>
+
+<ParamField path="Pending" type="string">
+  Sync status:
+  - **All synced**: No pending uploads
+  - **X entries need sync**: Number of entries modified locally but not yet uploaded
+  
+  Only shown when vault is unlocked and Google Drive is connected.
+</ParamField>
+
+## Behavior
+
+### Duress mode detection
+
+If duress mode is active (triggered by a duress password), `status` displays fake information:
+- Shows vault as unlocked
+- Displays decoy entry count
+- Shows fake sync timestamps
+- Indicates Google Drive is connected
+
+This protects real vault data under coercion.
+
+### Information availability
+
+Certain fields are only available when the vault is unlocked:
+- Entry count
+- Creation timestamp
+- Last sync timestamp
+- Pending uploads count
+
+<Note>
+  The `status` command never prompts for a password. It shows available information based on the current lock state.
+</Note>
+
+## Use cases
+
+### Quick health check
+
+Verify vault is initialized and unlocked:
+
+```bash
+BLANK status
+```
+
+### Pre-sync verification
+
+Check pending uploads before syncing:
+
+```bash
+BLANK status
+BLANK sync
+```
+
+### Troubleshooting connection
+
+Verify Google Drive authentication:
+
+```bash
+BLANK status
+```
+
+If `Connected: No`, run:
+
+```bash
+BLANK auth
+```
+
+### Confirm initialization
+
+After running `BLANK init`, verify setup:
+
+```bash
+BLANK status
+```
+
+## Implementation details
+
+From `src/cli/commands/status.ts:11-97`:
+
+```typescript
+export async function statusCommand(): Promise<void> {
+  console.log(chalk.bold('\n  BlankDrive Vault Status\n'));
+
+  // Duress mode - show fake status
+  if (isInDuressMode()) {
+    // ... display decoy information
+    return;
+  }
+
+  const paths = getVaultPaths();
+
+  // Check if vault exists
+  const exists = await vaultExists();
+  console.log(`  ${chalk.gray('Vault:')}      ${exists ? chalk.green('Initialized') : chalk.red('Not initialized')}`);
+
+  if (!exists) {
+    console.log(chalk.gray('\n  Run "BLANK init" to create a vault.\n'));
+    return;
+  }
+
+  // ... display vault and sync information
+}
+```
+
+<Warning>
+  **Privacy note**: The `status` command displays the vault directory path. Ensure your terminal is not visible to others when running this command in public spaces.
+</Warning>
+
+## Related commands
+
+- [`init`](/commands/init) - Initialize a vault
+- [`lock`](/commands/lock) - Lock the vault
+- [`auth`](/commands/auth) - Connect to Google Drive
+
+- [`settings`](/commands/settings) - Configure cloud storage mode

@@ -1,0 +1,540 @@
+---
+title: "generate"
+description: "Generate secure passwords and passphrases with strength analysis"
+icon: "key"
+---
+
+## Overview
+
+The `generate` command creates cryptographically secure passwords and passphrases. It includes strength analysis, entropy calculation, and multiple generation modes.
+
+<Note>
+All passwords are generated using cryptographically secure random number generation (CSPRNG).
+</Note>
+
+## Usage
+
+```bash
+BLANK generate [options]
+```
+
+**Alias:** `gen`
+
+## Options
+
+<ParamField path="-l, --length" type="number">
+  Password length (4-256 characters). Default: 20
+</ParamField>
+
+<ParamField path="-p, --preset" type="string">
+  Use a preset configuration: `strong`, `standard`, `alphanumeric`, `memorable`, or `pin`
+</ParamField>
+
+<ParamField path="--passphrase" type="boolean">
+  Generate a memorable passphrase instead of a password
+</ParamField>
+
+<ParamField path="-w, --words" type="number">
+  Number of words for passphrase (3-12). Default: 5
+</ParamField>
+
+<ParamField path="-c, --copy" type="boolean">
+  Copy generated password to clipboard
+</ParamField>
+
+<ParamField path="--no-symbols" type="boolean">
+  Exclude symbols from password
+</ParamField>
+
+## Interactive Mode
+
+If you run `generate` without options, it enters interactive mode:
+
+```bash
+BLANK generate
+```
+
+```
+  🔐 Password Generator
+
+  Generation mode:
+  ❯ 🔐 Password (random characters)
+    📝 Passphrase (memorable words)
+    ⚡ Quick (use preset)
+```
+
+<Tip>
+Interactive mode is the easiest way to explore all generation options.
+</Tip>
+
+## Presets
+
+### Available Presets
+
+| Preset | Length | Character Types | Use Case |
+|--------|--------|----------------|----------|
+| `strong` | 24 chars | Uppercase, lowercase, numbers, symbols | Maximum security |
+| `standard` | 16 chars | Uppercase, lowercase, numbers, symbols | General use |
+| `alphanumeric` | 16 chars | Uppercase, lowercase, numbers | No symbols allowed |
+| `memorable` | 12 chars | Easy to type characters | Mobile-friendly |
+| `pin` | 6 chars | Numbers only | PIN codes |
+
+### Examples
+
+#### Strong Password (24 characters)
+
+```bash
+BLANK generate --preset strong
+```
+
+```
+  🔐 Password Generator
+
+  Generated Password:
+
+   xK9$mN2@pQ7#vB4!wL6%zR8& 
+
+  Strength:  ████████████████████ EXCELLENT (100/100)
+  Entropy:   142.7 bits
+  Length:    24 characters
+```
+
+#### Standard Password (16 characters)
+
+```bash
+BLANK generate --preset standard
+```
+
+```
+  Generated Password:
+
+   aB3!xY9#mK2$vL7@ 
+
+  Strength:  ██████████████████░░ STRONG (95/100)
+  Entropy:   95.3 bits
+  Length:    16 characters
+```
+
+#### Alphanumeric (no symbols)
+
+```bash
+BLANK generate --preset alphanumeric
+```
+
+```
+  Generated Password:
+
+   xK9mN2pQ7vB4wL6z 
+
+  Strength:  ████████████████░░░░ STRONG (84/100)
+  Entropy:   89.6 bits
+  Length:    16 characters
+```
+
+#### Memorable Password
+
+```bash
+BLANK generate --preset memorable
+```
+
+```
+  Generated Password:
+
+   aX9mY2pZ7vQ4 
+
+  Strength:  ██████████████░░░░░░ GOOD (71/100)
+  Entropy:   67.2 bits
+  Length:    12 characters
+```
+
+#### PIN Code
+
+```bash
+BLANK generate --preset pin
+```
+
+```
+  Generated Password:
+
+   847923 
+
+  Strength:  ████░░░░░░░░░░░░░░░░ FAIR (20/100)
+  Entropy:   19.9 bits
+  Length:    6 characters
+
+  Suggestions:
+    • Increase length to at least 12 characters
+    • Add uppercase letters
+    • Add lowercase letters
+    • Add symbols
+```
+
+## Custom Password Generation
+
+### Custom Length
+
+```bash
+BLANK generate --length 32
+```
+
+```
+  Generated Password:
+
+   xK9$mN2@pQ7#vB4!wL6%zR8&aH3^dF5* 
+
+  Strength:  ████████████████████ EXCELLENT (100/100)
+  Entropy:   190.2 bits
+  Length:    32 characters
+```
+
+### Without Symbols
+
+```bash
+BLANK generate --length 20 --no-symbols
+```
+
+```
+  Generated Password:
+
+   xK9mN2pQ7vB4wL6zaH3d 
+
+  Strength:  ██████████████████░░ STRONG (89/100)
+  Entropy:   112.1 bits
+  Length:    20 characters
+```
+
+### With Clipboard Copy
+
+```bash
+BLANK generate --preset strong --copy
+```
+
+```
+  Generated Password:
+
+   xK9$mN2@pQ7#vB4!wL6%zR8& 
+
+  Strength:  ████████████████████ EXCELLENT (100/100)
+  Entropy:   142.7 bits
+  Length:    24 characters
+
+  ✓ Password copied to clipboard
+```
+
+## Passphrase Generation
+
+Passphrases use random words instead of random characters, making them easier to remember.
+
+### Basic Passphrase
+
+```bash
+BLANK generate --passphrase
+```
+
+```
+  Generated Password:
+
+   correct-horse-battery-staple-trumpet 
+
+  Strength:  ████████████████████ EXCELLENT (98/100)
+  Entropy:   64.6 bits
+  Length:    37 characters
+```
+
+### Custom Word Count
+
+```bash
+BLANK generate --passphrase --words 7
+```
+
+```
+  Generated Password:
+
+   mountain-river-forest-cloud-thunder-ocean-sunrise 
+
+  Strength:  ████████████████████ EXCELLENT (100/100)
+  Entropy:   90.4 bits
+  Length:    55 characters
+```
+
+### Short Passphrase
+
+```bash
+BLANK generate --passphrase --words 3
+```
+
+```
+  Generated Password:
+
+   apple-quick-zebra 
+
+  Strength:  ██████████████░░░░░░ GOOD (64/100)
+  Entropy:   38.8 bits
+  Length:    17 characters
+
+  Suggestions:
+    • Increase to at least 4 words for better security
+```
+
+## Interactive Custom Password
+
+In interactive mode, you can customize every aspect:
+
+```bash
+BLANK generate
+```
+
+```
+  Generation mode:
+  ❯ 🔐 Password (random characters)
+
+  Password length (4-256): [20]
+  32
+
+  Character types:
+  ❯ ◉ Uppercase (A-Z)
+    ◉ Lowercase (a-z)
+    ◉ Numbers (0-9)
+    ◉ Symbols (!@#$...)
+
+  Exclude ambiguous characters (0, O, l, 1, I)? (Y/n)
+  Y
+
+  Generated Password:
+
+   xK9$mN2@pQ7#vB4!wL6%zR8&aH3^dF5* 
+
+  Strength:  ████████████████████ EXCELLENT (100/100)
+  Entropy:   190.2 bits
+  Length:    32 characters
+
+  Copy to clipboard? (Y/n)
+  Y
+
+  ✓ Password copied to clipboard
+
+  Generate another with same settings? (y/N)
+```
+
+## Interactive Passphrase
+
+```bash
+BLANK generate
+```
+
+```
+  Generation mode:
+  ❯ 📝 Passphrase (memorable words)
+
+  Number of words (3-12): [5]
+  6
+
+  Word separator:
+  ❯ Hyphen (-)
+    Underscore (_)
+    Period (.)
+    None
+
+  Generated Password:
+
+   forest_mountain_river_thunder_ocean_cloud 
+
+  Strength:  ████████████████████ EXCELLENT (100/100)
+  Entropy:   77.5 bits
+  Length:    43 characters
+
+  Copy to clipboard? (Y/n)
+```
+
+## Strength Analysis
+
+### Strength Levels
+
+| Score | Level | Bar Color | Meaning |
+|-------|-------|-----------|----------|
+| 0-20  | Weak | 🔴 Red | Very unsafe |
+| 21-40 | Fair | 🟠 Orange | Marginally safe |
+| 41-60 | Good | 🟡 Yellow | Reasonably safe |
+| 61-80 | Strong | 🟢 Green | Safe |
+| 81-100 | Excellent | 💚 Bright Green | Very safe |
+
+### Entropy Calculation
+
+Entropy measures password randomness in bits:
+
+- **< 28 bits**: Very weak (easily cracked)
+- **28-35 bits**: Weak
+- **36-59 bits**: Fair
+- **60-127 bits**: Strong
+- **128+ bits**: Excellent
+
+### Feedback and Suggestions
+
+For passwords below "Strong" level, the generator provides actionable feedback:
+
+```
+  Strength:  ████░░░░░░░░░░░░░░░░ FAIR (38/100)
+  Entropy:   42.3 bits
+  Length:    8 characters
+
+  Suggestions:
+    • Increase length to at least 12 characters
+    • Add symbols for better security
+```
+
+## Advanced Options
+
+### Character Type Selection (Interactive)
+
+In interactive mode, you can select exactly which character types to include:
+
+```
+  Character types:
+  ❯ ◉ Uppercase (A-Z)
+    ◉ Lowercase (a-z)
+    ◉ Numbers (0-9)
+    ◯ Symbols (!@#$...)
+```
+
+Deselect symbols by pressing Space.
+
+### Ambiguous Character Exclusion
+
+Exclude characters that look similar:
+
+- `0` (zero) vs `O` (letter O)
+- `1` (one) vs `l` (lowercase L) vs `I` (uppercase i)
+
+This is useful for passwords you need to type manually.
+
+## Use Cases
+
+### Web Accounts (Strong)
+
+```bash
+BLANK generate --preset strong --copy
+```
+
+Generate a 24-character password for important accounts.
+
+### Mobile Apps (Alphanumeric)
+
+```bash
+BLANK generate --preset alphanumeric --copy
+```
+
+No symbols for easier mobile keyboard typing.
+
+### Master Passwords (Passphrase)
+
+```bash
+BLANK generate --passphrase --words 7
+```
+
+Memorable but strong passphrase for master passwords.
+
+### Wi-Fi Password (Memorable)
+
+```bash
+BLANK generate --preset memorable
+```
+
+Easier to share verbally or type on devices.
+
+### PIN Codes
+
+```bash
+BLANK generate --preset pin
+```
+
+Numeric PIN for devices or systems that require numbers only.
+
+## Integration with `add` Command
+
+When adding a new password entry, you can generate a password inline:
+
+```bash
+BLANK add
+```
+
+```
+  Password:
+  ❯ 🔐 Generate strong password
+    📝 Generate passphrase
+    ✏️  Enter manually
+
+  [Select "Generate strong password"]
+
+  Generated: xK9$mN2@pQ7#vB4!wL6%
+  Strength:  EXCELLENT (142 bits)
+
+  Use this password? (Y/n)
+```
+
+## Clipboard Integration
+
+When using `--copy`, the password is automatically copied to your clipboard:
+
+```bash
+BLANK gen --preset strong --copy
+```
+
+```
+  ✓ Password copied to clipboard
+```
+
+<Warning>
+The clipboard contains sensitive data. Be careful when pasting.
+</Warning>
+
+## Error Handling
+
+### Invalid Length
+
+```bash
+BLANK generate --length 500
+```
+
+```
+  Password length (4-256): 500
+  Maximum length is 256
+```
+
+### Invalid Word Count
+
+```bash
+BLANK generate --passphrase --words 20
+```
+
+```
+  Number of words (3-12): 20
+  Maximum 12 words
+```
+
+### Clipboard Failure
+
+```bash
+BLANK generate --copy
+```
+
+```
+  ✓ Password generated
+
+  ⚠ Could not copy to clipboard
+```
+
+## Technical Details
+
+- Uses `crypto.randomBytes()` for cryptographically secure randomness
+- Password character set: 94 printable ASCII characters
+- Passphrase wordlist: 7,776 words (EFF long wordlist)
+- Entropy formula: `log2(charset_size ^ length)`
+- Strength scoring: Based on zxcvbn algorithm
+- Excludes ambiguous characters when requested: `0O1lI`
+
+## Related Commands
+
+- [`add`](/commands/add) - Add password entry (with inline generation)
+- [`edit`](/commands/edit) - Edit password entry (with regeneration)
+- [`audit`](/commands/audit) - Check password strength across vault
+

@@ -1,0 +1,383 @@
+---
+title: 'Encryption'
+description: 'AES-256-GCM encryption implementation and authenticated encryption details'
+---
+
+## Overview
+
+BlankDrive uses **AES-256-GCM** (Galois/Counter Mode) for all data encryption, providing both confidentiality and authenticity. All encryption happens client-side before any data leaves your device.
+
+## Algorithm Specifications
+
+### Core Parameters
+
+```typescript
+const ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 12;          // 12 bytes (96 bits)
+const AUTH_TAG_LENGTH = 16;    // 16 bytes (128 bits)
+```
+
+Source: [encryption.ts:6-8](~/workspace/source/src/crypto/encryption.ts:6-8)
+
+<Info>
+AES-256-GCM is an AEAD (Authenticated Encryption with Associated Data) cipher that provides both encryption and authentication in a single operation.
+</Info>
+
+### Key Size
+
+BlankDrive uses **256-bit keys** (32 bytes) for AES encryption. All keys are derived using Argon2id and HKDF-SHA256.
+
+## Initialization Vector (IV) Generation
+
+### Cryptographic Randomness
+
+Each encryption operation generates a **fresh, random 12-byte IV** using Node.js's `crypto.randomBytes()`:
+
+```typescript
+export function generateIV(): Buffer {
+  return randomBytes(12);
+}
+```
+
+Source: [random.ts:20-22](~/workspace/source/src/crypto/random.ts:20-22)
+
+<Warning>
+**Never reuse IVs**: Each encryption operation generates a new IV. Reusing an IV with the same key in GCM mode completely breaks security.
+</Warning>
+
+### IV Uniqueness Guarantee
+
+With a 12-byte (96-bit) IV space:
+- Collision probability remains negligible for billions of operations
+- Node.js `crypto.randomBytes()` uses the OS's CSPRNG (cryptographically secure pseudo-random number generator)
+- On Linux: uses `/dev/urandom`
+- On Windows: uses `BCryptGenRandom`
+
+## Authentication Tags
+
+### Tag Generation
+
+AES-GCM produces a **16-byte authentication tag** that verifies:
+- Ciphertext has not been modified
+- Associated data (AAD) has not been modified
+- Correct key was used for decryption
+
+```typescript
+const cipher = crypto.createCipheriv(ALGORITHM, key, iv, {
+  authTagLength: AUTH_TAG_LENGTH,
+});
+
+// ... encryption ...
+
+const authTag = cipher.getAuthTag();
+```
+
+Source: [encryption.ts:20-33](~/workspace/source/src/crypto/encryption.ts:20-33)
+
+### Tag Verification
+
+During decryption, the authentication tag is verified **before** any plaintext is returned:
+
+```typescript
+const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, {
+  authTagLength: AUTH_TAG_LENGTH,
+});
+
+decipher.setAuthTag(authTag);
+
+try {
+  const plaintext = Buffer.concat([
+    decipher.update(ciphertext),
+    decipher.final(),  // Verifies tag here
+  ]);
+  return plaintext;
+} catch (error) {
+  throw new Error('Decryption failed: Invalid key or corrupted data');
+}
+```
+
+Source: [encryption.ts:48-66](~/workspace/source/src/crypto/encryption.ts:48-66)
+
+<Note>
+If the authentication tag verification fails, `decipher.final()` throws an error and no plaintext is returned. This prevents accepting tampered data.
+</Note>
+
+## Additional Authenticated Data (AAD)
+
+### AAD Binding
+
+AAD allows binding encrypted data to specific contexts without encrypting the context itself. BlankDrive uses AAD for:
+
+1. **Vault entries**: Bound to entry ID
+2. **File chunks**: Bound to chunk-specific identifier
+
+```typescript
+export function encrypt(
+  plaintext: Buffer,
+  key: Buffer,
+  aad?: Buffer
+): EncryptedData {
+  const iv = generateIV();
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
+
+  if (aad) {
+    cipher.setAAD(aad);
+  }
+
+  // ... encryption ...
+}
+```
+
+Source: [encryption.ts:13-26](~/workspace/source/src/crypto/encryption.ts:13-26)
+
+### AAD Use Cases
+
+<Accordion title="Entry ID Binding">
+When encrypting vault entries, the entry ID is used as AAD:
+
+```typescript
+const aadBuffer = Buffer.from(entryId, 'utf-8');
+const encrypted = encrypt(plaintextBuffer, key, aadBuffer);
+```
+
+This ensures:
+- Entry data cannot be swapped between different entries
+- Prevents confused deputy attacks
+- The entry ID must match during decryption
+</Accordion>
+
+<Accordion title="Chunk ID Binding">
+For large file encryption with chunking, each chunk is bound to its identifier:
+
+```typescript
+const chunkAAD = `${entryId}_chunk_${chunkIndex}`;
+const aadBuffer = Buffer.from(chunkAAD, 'utf-8');
+```
+
+This prevents:
+- Chunk reordering attacks
+- Chunk duplication
+- Cross-entry chunk confusion
+</Accordion>
+
+### AAD Verification
+
+During decryption, the **same AAD must be provided**:
+
+```typescript
+export function decrypt(
+  encryptedData: EncryptedData,
+  key: Buffer,
+  aad?: Buffer
+): Buffer {
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
+
+  decipher.setAuthTag(authTag);
+
+  if (aad) {
+    decipher.setAAD(aad);  // Must match encryption AAD
+  }
+
+  // ... decryption ...
+}
+```
+
+Source: [encryption.ts:41-56](~/workspace/source/src/crypto/encryption.ts:41-56)
+
+<Warning>
+If the AAD provided during decryption doesn't match the AAD used during encryption, authentication fails and decryption is rejected.
+</Warning>
+
+## Payload Serialization
+
+### Binary Format
+
+Encrypted data is serialized as:
+
+```
+[IV (12 bytes)] + [Ciphertext (variable)] + [Auth Tag (16 bytes)]
+```
+
+```typescript
+export function encryptToBuffer(
+  plaintext: string | Buffer,
+  key: Buffer,
+  aad?: string
+): Buffer {
+  const encrypted = encrypt(plaintextBuffer, key, aadBuffer);
+
+  // Combine: IV (12) + Ciphertext + AuthTag (16)
+  return Buffer.concat([
+    encrypted.iv,
+    encrypted.ciphertext,
+    encrypted.authTag,
+  ]);
+}
+```
+
+Source: [encryption.ts:72-89](~/workspace/source/src/crypto/encryption.ts:72-89)
+
+### Deserialization
+
+Decryption extracts components from the combined buffer:
+
+```typescript
+export function decryptFromBuffer(
+  combined: Buffer,
+  key: Buffer,
+  aad?: string
+): Buffer {
+  if (combined.length < IV_LENGTH + AUTH_TAG_LENGTH) {
+    throw new Error('Invalid encrypted payload: too short');
+  }
+
+  const iv = combined.subarray(0, IV_LENGTH);
+  const authTag = combined.subarray(combined.length - AUTH_TAG_LENGTH);
+  const ciphertext = combined.subarray(IV_LENGTH, combined.length - AUTH_TAG_LENGTH);
+
+  return decrypt({ iv, ciphertext, authTag }, key, aadBuffer);
+}
+```
+
+Source: [encryption.ts:95-110](~/workspace/source/src/crypto/encryption.ts:95-110)
+
+### Base64 Encoding
+
+For storage and transmission, encrypted payloads are base64-encoded:
+
+```typescript
+export function encryptToPayload(
+  plaintext: string | Buffer,
+  key: Buffer,
+  aad?: string
+): string {
+  return encryptToBuffer(plaintext, key, aad).toString('base64');
+}
+```
+
+Source: [encryption.ts:116-121](~/workspace/source/src/crypto/encryption.ts:116-121)
+
+## High-Level Encryption Functions
+
+### Object Encryption
+
+BlankDrive provides convenience functions for encrypting JavaScript objects:
+
+```typescript
+export function encryptObject<T>(
+  obj: T,
+  key: Buffer,
+  aad?: string
+): string {
+  const json = JSON.stringify(obj);
+  return encryptToPayload(json, key, aad);
+}
+
+export function decryptObject<T>(
+  payload: string,
+  key: Buffer,
+  aad?: string
+): T {
+  const json = decryptToString(payload, key, aad);
+  return JSON.parse(json) as T;
+}
+```
+
+Source: [encryption.ts:148-168](~/workspace/source/src/crypto/encryption.ts:148-168)
+
+<Info>
+Object encryption serializes to JSON before encryption, ensuring structured data remains intact through the encryption/decryption cycle.
+</Info>
+
+## Security Properties
+
+### What AES-256-GCM Provides
+
+| Property | Description |
+|----------|-------------|
+| **Confidentiality** | Plaintext cannot be recovered without the key |
+| **Authenticity** | Ciphertext cannot be forged or modified |
+| **Integrity** | Any modification is detected during decryption |
+| **AAD Binding** | Context data is cryptographically bound |
+| **Key Security** | 256-bit key space (2^256 combinations) |
+
+### What AES-256-GCM Does NOT Provide
+
+<Warning>
+**Not protected against**:
+- **Timing attacks on application logic**: Constant-time comparisons are needed for sensitive operations
+- **Memory dumps**: Plaintext keys and data in memory can be extracted by malware
+- **Side-channel attacks**: Cache timing, power analysis (not applicable to software-only implementations)
+- **Metadata leakage**: File sizes, access patterns, and timestamps are not encrypted
+</Warning>
+
+## Implementation Security
+
+### Secure Buffer Handling
+
+BlankDrive implements secure memory wiping for sensitive buffers:
+
+```typescript
+export function wipeBuffer(buffer: Buffer): void {
+  if (!buffer || buffer.length === 0) return;
+
+  // Overwrite with random data
+  crypto.randomFillSync(buffer);
+  // Overwrite with zeros
+  buffer.fill(0);
+}
+```
+
+Source: [memoryGuard.ts:17-26](~/workspace/source/src/crypto/memoryGuard.ts:17-26)
+
+### Constant-Time Comparison
+
+For authentication verification, constant-time comparison prevents timing attacks:
+
+```typescript
+export function secureCompare(a: Buffer, b: Buffer): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(a, b);
+}
+```
+
+Source: [memoryGuard.ts:126-131](~/workspace/source/src/crypto/memoryGuard.ts:126-131)
+
+<Note>
+`crypto.timingSafeEqual()` executes in constant time regardless of buffer contents, preventing attackers from using timing differences to guess secrets.
+</Note>
+
+## Best Practices
+
+### Do's
+
+- ✅ Always use fresh random IVs (handled automatically)
+- ✅ Use AAD binding for context-specific encryption
+- ✅ Verify authentication tags before trusting decrypted data (handled automatically)
+- ✅ Use secure key derivation (see [Key Derivation](/security/key-derivation))
+- ✅ Wipe sensitive buffers after use
+
+### Don'ts
+
+- ❌ Never reuse IVs with the same key
+- ❌ Never skip authentication tag verification
+- ❌ Never use hardcoded keys
+- ❌ Never encrypt without proper key derivation
+- ❌ Never trust ciphertext size as a secret (metadata leakage)
+
+## References
+
+- [NIST SP 800-38D: GCM Specification](https://csrc.nist.gov/publications/detail/sp/800-38d/final)
+- [RFC 5116: AEAD Cipher Suites](https://datatracker.ietf.org/doc/html/rfc5116)
+- [Node.js Crypto Documentation](https://nodejs.org/api/crypto.html)
+
+## Related Topics
+
+- [Key Derivation](/security/key-derivation) - How encryption keys are derived from passwords
+- [Trust Model](/security/trust-model) - Security guarantees and threat model

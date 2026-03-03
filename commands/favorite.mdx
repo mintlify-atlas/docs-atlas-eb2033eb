@@ -1,0 +1,347 @@
+---
+title: "favorite"
+description: "Toggle favorite status for vault entries"
+icon: "star"
+---
+
+## Overview
+
+The `favorite` command lets you mark vault entries (passwords, files, or notes) as favorites for quick access. Favorites appear with a ⭐ star in lists.
+
+<Note>
+Favorites are stored in your encrypted vault and sync across all devices.
+</Note>
+
+## Usage
+
+```bash
+BLANK favorite [search]
+```
+
+**Alias:** `fav`
+
+## Arguments
+
+<ParamField path="search" type="string" optional>
+  Search term to find the entry by title. If omitted or multiple matches found, shows an interactive picker.
+</ParamField>
+
+## How It Works
+
+The `favorite` command **toggles** the favorite status:
+
+- If the entry is **not favorited**, it becomes favorited ⭐
+- If the entry is **already favorited**, it is unfavorited
+
+This makes it easy to quickly star and unstar entries.
+
+## Examples
+
+### Toggle Favorite by Title
+
+```bash
+BLANK favorite gmail
+```
+
+```
+  ⭐ Toggle Favorite
+
+  Updating...
+
+  ⭐ "Gmail" added to favorites!
+```
+
+Run it again to remove from favorites:
+
+```bash
+BLANK favorite gmail
+```
+
+```
+  ⭐ Toggle Favorite
+
+  Updating...
+
+  ✓ "Gmail" removed from favorites.
+```
+
+### Toggle Favorite with Alias
+
+```bash
+BLANK fav github
+```
+
+### Interactive Favorite Selection
+
+If you don't provide a search term, you'll see a list of all entries:
+
+```bash
+BLANK favorite
+```
+
+```
+  ⭐ Toggle Favorite
+
+  Select an entry to toggle favorite:
+  ❯ ⭐ Gmail
+       GitHub
+       Dropbox
+       Meeting Notes
+    ⭐ Work VPN
+```
+
+Entries already marked as favorites show a ⭐ star.
+
+### Search with Partial Match
+
+```bash
+BLANK favorite bank
+```
+
+If only one entry matches "bank", it's automatically selected:
+
+```
+  Selected: Bank of America
+
+  Updating...
+
+  ⭐ "Bank of America" added to favorites!
+```
+
+### Multiple Matches
+
+If multiple entries match your search:
+
+```bash
+BLANK favorite app
+```
+
+```
+  ⭐ Toggle Favorite
+
+  Select an entry to toggle favorite:
+  ❯    Apple ID
+    ⭐ WhatsApp
+       Snapchat
+```
+
+### No Matches
+
+```bash
+BLANK favorite nonexistent
+```
+
+```
+  No entries found matching "nonexistent".
+```
+
+## Viewing Favorites
+
+Use the `favorites` command to list only favorited entries:
+
+```bash
+BLANK favorites
+```
+
+```
+  ⭐ Favorite Entries
+
+  Found 3 favorites:
+
+  🔐 ⭐ Gmail (3/2/2026)
+  📁 ⭐ Tax Documents (2/15/2026)
+  🔐 ⭐ Work VPN (1/28/2026)
+```
+
+Alias: `favs`
+
+```bash
+BLANK favs
+```
+
+## Entry Types
+
+You can favorite any type of vault entry:
+
+- **🔐 Passwords**: Login credentials
+- **📁 Files**: Uploaded documents
+- **📝 Notes**: Secure notes
+
+### Example with Different Entry Types
+
+```bash
+BLANK list
+```
+
+```
+  Vault Entries (5 total)
+
+  Passwords:
+  ⭐ 🔐 Gmail (3/2/2026)
+     🔐 GitHub (2/28/2026)
+
+  Files:
+  ⭐ 📁 Tax Documents (2/15/2026)
+     📁 Resume.pdf (2/10/2026)
+
+  Notes:
+     📝 Meeting Notes (3/1/2026)
+```
+
+The ⭐ star appears next to favorited entries in all list views.
+
+## Search Behavior
+
+- **Case-insensitive**: Searches ignore case
+- **Partial matches**: Matches any part of the title
+- **All entry types**: Searches passwords, files, and notes
+- **Single match**: Automatically selects the entry
+- **Multiple matches**: Shows interactive picker
+- **No matches**: Shows error message
+
+## Authentication
+
+The favorite command automatically unlocks the vault if needed:
+
+```
+  ⭐ Toggle Favorite
+
+  Unlocking vault...
+
+  Master password: ••••••••
+
+  ✓ Vault unlocked
+
+  Loading entries...
+```
+
+## Favorites in Other Commands
+
+Favorites appear with a ⭐ star in:
+
+- `list` - All vault entries
+- `favorites` / `favs` - Only favorited entries
+- `note list` - All notes with favorites highlighted
+- `get` - When searching for entries
+- `edit` - When selecting entries to edit
+- `delete` - When selecting entries to delete
+
+### Example: Favorites in `list` Command
+
+```bash
+BLANK list
+```
+
+```
+  Vault Entries (8 total)
+
+  ⭐ 🔐 Gmail
+     🔐 GitHub
+     🔐 Dropbox
+  ⭐ 📁 Tax Documents
+     📁 Resume.pdf
+  ⭐ 📝 Meeting Notes
+     📝 TODO List
+     📝 Project Ideas
+```
+
+## Error Handling
+
+### No Entries in Vault
+
+```bash
+BLANK favorite
+```
+
+```
+  No entries in vault.
+```
+
+### No Vault Found
+
+```bash
+BLANK favorite test
+```
+
+```
+  No vault found. Run "BLANK init" first.
+```
+
+### Failed to Update
+
+```
+  Updating...
+
+  ✗ Failed to update favorite status
+  Vault index is corrupted.
+```
+
+## Use Cases
+
+### Quick Access to Frequent Logins
+
+Mark your most-used accounts as favorites:
+
+```bash
+BLANK fav gmail
+BLANK fav slack
+BLANK fav github
+```
+
+Then quickly view them:
+
+```bash
+BLANK favs
+```
+
+### Important Documents
+
+Star critical files for easy retrieval:
+
+```bash
+BLANK favorite passport-scan.pdf
+BLANK favorite tax-2025.pdf
+```
+
+### Project Notes
+
+Highlight active project notes:
+
+```bash
+BLANK favorite "Project Alpha Notes"
+BLANK favorite "Sprint Planning"
+```
+
+### Temporary Favorites
+
+Use favorites as a temporary "working set":
+
+```bash
+# Star entries you're currently working with
+BLANK fav work-vpn
+BLANK fav jira
+BLANK fav confluence
+
+# View your working set
+BLANK favs
+
+# Unstar when done
+BLANK fav work-vpn
+BLANK fav jira
+```
+
+## Technical Details
+
+- Favorite status is stored in the vault index
+- Changes are synced to Google Drive immediately
+- No limit on number of favorites
+- Favorite status persists across vault backups and restores
+- Favorites are encrypted as part of the vault data
+
+## Related Commands
+
+- [`favorites`](/commands/favorites) - List only favorited entries
+- [`list`](/commands/list) - View all vault entries with favorite indicators
+- [`get`](/commands/get) - Retrieve password entries (favorites shown)
+- [`note`](/commands/note) - Manage notes (favorites shown)
+

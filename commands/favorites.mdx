@@ -1,0 +1,186 @@
+---
+title: "favorites"
+description: "List all favorited entries in your vault"
+icon: "star"
+---
+
+## Overview
+
+The `favorites` command displays all vault entries that have been marked as favorites. This provides a quick way to access your most frequently used passwords, files, and notes.
+
+<Note>
+Favorites are indicated with a ⭐ star icon across all BlankDrive commands.
+</Note>
+
+## Usage
+
+```bash
+BLANK favorites
+```
+
+**Alias:** `favs`
+
+## Examples
+
+### List All Favorites
+
+```bash
+BLANK favorites
+```
+
+```
+  ⭐ Favorite Entries
+
+  Found 3 favorites:
+
+  🔐 ⭐ Gmail (3/2/2026)
+  📁 ⭐ Tax Documents (2/15/2026)
+  🔐 ⭐ Work VPN (1/28/2026)
+```
+
+### Using the Alias
+
+```bash
+BLANK favs
+```
+
+### No Favorites Yet
+
+If you haven't marked any entries as favorites:
+
+```bash
+BLANK favorites
+```
+
+```
+  ⭐ Favorite Entries
+
+  No favorite entries yet.
+  Use "BLANK favorite" to star entries.
+```
+
+## Entry Types
+
+The favorites list shows all types of favorited entries:
+
+- **🔐 Passwords**: Login credentials
+- **📁 Files**: Uploaded documents
+- **📝 Notes**: Secure notes
+
+Each entry displays with its icon, favorite star, title, and last modified date.
+
+## Marking Favorites
+
+To add or remove entries from favorites, use the [`favorite`](/commands/favorite) command:
+
+```bash
+# Mark an entry as favorite
+BLANK favorite gmail
+
+# Remove from favorites (toggle)
+BLANK favorite gmail
+```
+
+## Authentication
+
+The favorites command automatically unlocks the vault if needed:
+
+```
+  ⭐ Favorite Entries
+
+  Unlocking vault...
+
+  Master password: ••••••••
+
+  ✓ Vault unlocked
+
+  Loading entries...
+```
+
+## Error Handling
+
+### No Vault Found
+
+```bash
+BLANK favorites
+```
+
+```
+  No vault found. Run "BLANK init" first.
+```
+
+### Failed to Load
+
+```
+  Loading entries...
+
+  ✗ Failed to load entries
+  Vault index is corrupted.
+```
+
+## Use Cases
+
+### Quick Access Dashboard
+
+View all your frequently used entries at a glance:
+
+```bash
+BLANK favs
+```
+
+### Pre-Trip Checklist
+
+Before traveling, check all important credentials:
+
+```bash
+# Mark travel-related entries as favorites
+BLANK fav passport-scan
+BLANK fav flight-confirmation
+BLANK fav hotel-reservation
+
+# View all favorites
+BLANK favs
+```
+
+### Project Working Set
+
+Keep track of entries for active projects:
+
+```bash
+# Star project-related entries
+BLANK fav "Project Alpha VPN"
+BLANK fav "AWS Project Alpha"
+BLANK fav "Project Alpha Notes"
+
+# Review working set
+BLANK favs
+```
+
+### Daily Routine
+
+Create a favorites list of accounts you access daily:
+
+```bash
+BLANK fav email
+BLANK fav slack
+BLANK fav github
+BLANK fav jira
+
+# Quick morning check
+BLANK favs
+```
+
+## Technical Details
+
+- Favorites are stored in the vault index
+- No limit on the number of favorites
+- Favorites sync across devices via Google Drive
+- Favorite status is encrypted as part of the vault data
+- Entries are sorted by modification date (newest first)
+
+## Related Commands
+
+- [`favorite`](/commands/favorite) - Toggle favorite status for an entry
+- [`list`](/commands/list) - View all vault entries with favorite indicators
+- [`get`](/commands/get) - Retrieve password entries (favorites shown)
+- [`note`](/commands/note) - Manage notes (favorites shown)

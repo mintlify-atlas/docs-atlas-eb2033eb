@@ -1,0 +1,331 @@
+---
+title: "download"
+description: "Download and decrypt files from your vault"
+icon: "cloud-arrow-down"
+---
+
+## Overview
+
+The `download` command retrieves encrypted files from your vault, decrypts them, and saves them to your local system. It supports streaming decryption with adaptive parallelism based on available RAM.
+
+<Note>
+Files are streamed directly from Google Drive and decrypted in memory for maximum efficiency.
+</Note>
+
+## Usage
+
+```bash
+BLANK download [search]
+```
+
+**Alias:** `dl`
+
+## Arguments
+
+<ParamField path="search" type="string" optional>
+  Search term to find the file. Can be a file title, keyword, or numeric index (1-based). If omitted, shows an interactive file picker.
+</ParamField>
+
+## Interactive Features
+
+### File Selection Methods
+
+1. **Search by title**: `BLANK download report`
+2. **Numeric index**: `BLANK download 3` (downloads the 3rd file in your vault)
+3. **Interactive picker**: `BLANK download` (shows a list of all files)
+4. **Folder picker**: Type `browse` or `select` when prompted for save location (Windows only)
+
+### Destination Selection
+
+You can specify where to save the downloaded file:
+
+- **Default**: Downloads folder with original filename
+- **Custom path**: Specify a full path with filename
+- **Directory only**: Specify a directory, and the original filename will be used
+- **File picker**: Type `browse` to open a folder picker dialog
+
+<Tip>
+If you enter an existing directory path, the file will be saved there with its original name.
+</Tip>
+
+## Examples
+
+### Basic Download
+
+```bash
+BLANK download document.pdf
+```
+
+```
+  Download File from Vault
+
+  File: document.pdf
+  Original name: document.pdf
+  Size: 2.3 MB
+  Type: application/pdf
+
+  Tip: Type "browse" to open folder picker
+
+  Save to: [C:\Users\username\Downloads\document.pdf]
+
+  Available RAM: 8192 MB → Using 4 parallel streams
+  Streaming from cloud & decrypting...
+
+  Downloading [████████████████████] 100% (2.3 MB / 2.3 MB)
+
+  ✓ File downloaded successfully!
+
+  Saved to: C:\Users\username\Downloads\document.pdf
+```
+
+### Download by Index Number
+
+```bash
+BLANK download 1
+```
+
+Downloads the first file in your vault (based on `BLANK list` order).
+
+### Download with Alias
+
+```bash
+BLANK dl photo.jpg
+```
+
+### Interactive Download
+
+```bash
+BLANK download
+```
+
+```
+  Download File from Vault
+
+  Select a file to download:
+  ❯ 1. document.pdf (2.3 MB)
+    2. photo.jpg (5.7 MB)
+    3. report.docx (145.2 KB)
+    4. video.mp4 (256.8 MB)
+```
+
+### Download with Custom Path
+
+```bash
+BLANK download contract.pdf
+```
+
+```
+  File: contract.pdf
+  Original name: contract.pdf
+  Size: 1.2 MB
+  Type: application/pdf
+
+  Save to: [C:\Users\username\Downloads\contract.pdf]
+  C:\Users\username\Documents\Contracts\contract-final.pdf
+
+  Downloading [████████████████████] 100%
+
+  ✓ File downloaded successfully!
+
+  Saved to: C:\Users\username\Documents\Contracts\contract-final.pdf
+```
+
+### Download to Directory
+
+```bash
+BLANK download report.docx
+```
+
+```
+  Save to: [C:\Users\username\Downloads\report.docx]
+  C:\Users\username\Documents\
+
+  Saving as: C:\Users\username\Documents\report.docx
+```
+
+When you enter a directory path (ending with `/` or `\`), the original filename is automatically appended.
+
+### Download with Folder Picker
+
+```bash
+BLANK download
+```
+
+```
+  Select a file to download:
+  ❯ 1. presentation.pptx (8.4 MB)
+
+  File: presentation.pptx
+  Original name: presentation.pptx
+  Size: 8.4 MB
+  Type: application/vnd.openxmlformats-officedocument.presentationml.presentation
+
+  Tip: Type "browse" to open folder picker
+
+  Save to: browse
+
+  Opening folder picker...
+  Selected: C:\Users\username\Desktop
+```
+
+## Adaptive Parallelism
+
+BlankDrive automatically adjusts download parallelism based on available system memory:
+
+| Available RAM | Parallel Streams |
+|---------------|------------------|
+| < 4 GB        | 1 stream         |
+| 4-8 GB        | 2 streams        |
+| 8-16 GB       | 4 streams        |
+| 16 GB+        | 8 streams        |
+
+```
+Available RAM: 8192 MB → Using 4 parallel streams
+Streaming from cloud & decrypting...
+```
+
+<Tip>
+More parallel streams = faster downloads for large files.
+</Tip>
+
+## File Overwrite Protection
+
+If a file with the same name already exists at the destination, you'll be prompted:
+
+```
+  Save to: C:\Users\username\Downloads\document.pdf
+
+  File already exists. Overwrite? (y/N)
+```
+
+- Press `y` to overwrite
+- Press `n` or Enter to cancel
+
+## Search Behavior
+
+### Exact Match
+
+If only one file matches your search, it's selected automatically:
+
+```bash
+BLANK download quarterly-report
+```
+
+### Multiple Matches
+
+If multiple files match, you'll be prompted to choose:
+
+```bash
+BLANK download report
+```
+
+```
+  Multiple files found. Select one:
+  ❯ 1. report.docx (145.2 KB)
+    2. quarterly-report.pdf (2.3 MB)
+    3. annual-report-2023.pdf (5.1 MB)
+```
+
+### No Matches
+
+```bash
+BLANK download nonexistent.txt
+```
+
+```
+  No files matching "nonexistent.txt" found.
+  Use "list" to see available files.
+```
+
+### Invalid Index
+
+```bash
+BLANK download 999
+```
+
+```
+  Invalid file number: 999
+  Valid range: 1-4. Use "list" to see files.
+```
+
+## Progress Tracking
+
+The download shows real-time progress with transferred and total bytes:
+
+```
+Downloading [███████████████░░░░░] 78% (1.8 MB / 2.3 MB)
+```
+
+For large files, you'll see the progress update smoothly as chunks are streamed and decrypted.
+
+## Authentication
+
+The download command automatically handles authentication:
+
+1. **Vault unlock**: Prompts for master password if vault is locked
+2. **Google Drive auth**: Prompts for OAuth authentication if not connected
+
+## Error Handling
+
+### No Files in Vault
+
+```bash
+BLANK download
+```
+
+```
+  No files found in vault.
+  Use "BLANK upload" to add files.
+```
+
+### File Not Synced to Cloud
+
+```bash
+BLANK download local-only-file.txt
+```
+
+```
+  File not synced to cloud.
+  The file data is not available.
+```
+
+This happens if a file was uploaded but the cloud sync failed. Check `BLANK status` to see sync status.
+
+### Cloud Sync Not Available
+
+```bash
+BLANK download document.pdf
+```
+
+```
+  Cloud sync not available.
+  Run "BLANK auth" to connect your Google account.
+```
+
+### Download Failure
+
+```
+  Downloading [████████░░░░░░░░░░░░] 42%
+
+  ✗ Failed to download file
+  Network error: connection timeout
+```
+
+If a download fails mid-stream, you can simply retry the command.
+
+## Technical Details
+
+- Files are streamed directly from Google Drive (no temporary files)
+- Decryption happens in memory during streaming
+- AES-256-GCM decryption with authenticated encryption
+- Original filename, permissions, and metadata are restored
+- Adaptive chunk size based on file size
+- Parallel streaming for large files (RAM-dependent)
+
+## Related Commands
+
+- [`upload`](/commands/upload) - Upload files to the vault
+- [`list`](/commands/list) - View all files in the vault
+- [`status`](/commands/status) - Check cloud sync status
+- [`get`](/commands/get) - Retrieve password entries
+

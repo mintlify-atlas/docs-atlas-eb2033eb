@@ -1,0 +1,258 @@
+---
+title: "destruct"
+description: "Permanently destroy your BlankDrive vault (local and cloud)"
+---
+
+<Warning>
+  **DANGEROUS COMMAND**: This permanently deletes all vault data including encrypted files, credentials, and cloud backups. This action **cannot be undone**.
+</Warning>
+
+Completely wipe the BlankDrive vault from your local system and Google Drive cloud storage.
+
+## Usage
+
+```bash
+BLANK destruct
+```
+
+## Overview
+
+The `destruct` command is BlankDrive's self-destruct mechanism. It permanently and irreversibly deletes:
+
+- All local vault data (`~/.slasshy/`)
+- All encrypted files stored locally
+- All cloud backups in Google Drive (app data folder or public folder)
+- Stored Google Drive credentials
+- All vault settings and state files
+
+This command is designed for scenarios where you need to completely erase all traces of your BlankDrive vault.
+
+<Warning>
+  **This action is IRREVERSIBLE**. Once executed, there is no way to recover your vault, passwords, files, or encrypted data.
+</Warning>
+
+## Interactive Confirmations
+
+The command requires multiple confirmations to prevent accidental execution:
+
+1. **First confirmation**: Explicit yes/no prompt
+2. **Type "DESTROY"**: Must type exactly `DESTROY` (case-sensitive)
+3. **Password verification**: If a vault exists, you must enter your master password
+
+These safeguards ensure the command is never run accidentally.
+
+## What Gets Deleted
+
+### Local Data
+- **Vault directory**: `~/.slasshy/`
+  - Encrypted database
+  - Vault metadata
+  - Key derivation settings
+  - Update check state
+- **Credentials file**: `~/.slasshy-credentials.json`
+  - Google OAuth tokens
+  - Refresh tokens
+
+### Cloud Data
+- **All files in Google Drive app data folder** (if using hidden mode)
+- **All files in `BlankDrive/[folder-name]`** (if using public mode)
+- Encrypted vault backups
+- File metadata stored in the cloud
+
+## Examples
+
+### Standard Execution
+
+```bash
+BLANK destruct
+```
+
+**Output:**
+```
+  ⚠️  SELF-DESTRUCT MODE  ⚠️
+
+  This will PERMANENTLY DELETE:
+    • All local vault data
+    • All encrypted files
+    • All cloud backups
+    • Your vault credentials
+
+  This action CANNOT be undone!
+
+  ? Are you absolutely sure you want to destroy everything? (y/N)
+```
+
+After confirming:
+```
+  Type "DESTROY" to confirm:
+  ? > DESTROY
+
+  Verify your identity:
+  ? Enter master password: ********
+
+  ◒ Initiating self-destruct sequence...
+  ◒ Deleting cloud data...
+  ◒ Deleted 15 cloud files
+  ◒ Deleting local vault...
+  ◒ Clearing credentials...
+  ✓ Self-destruct complete
+
+  ════════════════════════════════════════
+  ║        VAULT DESTROYED               ║
+  ════════════════════════════════════════
+
+  All data has been permanently deleted.
+  To create a new vault, run: BLANK init
+```
+
+### Cancelled by User (First Prompt)
+
+```bash
+BLANK destruct
+```
+
+```
+  ⚠️  SELF-DESTRUCT MODE  ⚠️
+
+  This will PERMANENTLY DELETE:
+    • All local vault data
+    • All encrypted files
+    • All cloud backups
+    • Your vault credentials
+
+  This action CANNOT be undone!
+
+  ? Are you absolutely sure you want to destroy everything? No
+
+  Self-destruct cancelled.
+```
+
+### Cancelled by User (Typing Wrong Word)
+
+```
+  Type "DESTROY" to confirm:
+  ? > destroy
+
+  Self-destruct cancelled.
+```
+
+Note: The command requires exactly `DESTROY` in all caps.
+
+### Wrong Password
+
+```
+  Verify your identity:
+  ? Enter master password: ********
+
+  ✗ Invalid password. Self-destruct cancelled.
+```
+
+## Destruction Process
+
+The command executes deletion in this order:
+
+1. **Cloud data deletion**
+   - Authenticates with Google Drive (if credentials exist)
+   - Lists all files in app data or public folder
+   - Deletes each file individually
+   - Continues even if some files fail to delete
+
+2. **Local vault deletion**
+   - Recursively removes `~/.slasshy/` directory
+   - Force-deletes all contents
+   - Continues even if directory doesn't exist
+
+3. **Credentials removal**
+   - Deletes `~/.slasshy-credentials.json`
+   - Continues even if file doesn't exist
+
+## Error Handling
+
+**Cloud deletion fails:**
+The command continues with local deletion even if cloud files cannot be removed (e.g., no internet connection, revoked credentials).
+
+```
+  ◒ Could not delete cloud data (continuing...)
+  ◒ Deleting local vault...
+  ✓ Self-destruct complete
+```
+
+**Complete failure:**
+```
+  ✗ Self-destruct failed
+  [Error message]
+```
+
+Even if the command fails, partial deletion may have occurred. Check manually:
+- `ls ~/.slasshy`
+- `ls ~/.slasshy-credentials.json`
+
+## Safety Features
+
+1. **Triple confirmation**
+   - Yes/no prompt
+   - Must type "DESTROY"
+   - Password verification
+
+2. **Visual warnings**
+   - Red bold text
+   - Warning emoji
+   - Explicit listing of what will be deleted
+   - "CANNOT be undone" warnings
+
+3. **Password requirement**
+   - Ensures only the vault owner can destruct
+   - Prevents unauthorized destruction
+
+## When to Use
+
+Use the `destruct` command in these scenarios:
+
+- **Decommissioning**: Removing BlankDrive permanently from a system
+- **Security incident**: Emergency data wipe in case of compromise
+- **Clean slate**: Starting over with a fresh vault
+- **Device disposal**: Securely wiping data before selling/recycling hardware
+- **Privacy requirement**: Complete removal of all encrypted data
+
+<Warning>
+  **Do NOT use** if you want to:
+  - Reset your password (use password recovery instead)
+  - Delete specific entries (use `BLANK delete`)
+  - Clear the vault but keep settings (manually delete entries)
+  - Temporarily disable the vault (use `BLANK lock`)
+</Warning>
+
+## After Destruction
+
+Once the command completes:
+
+- Your vault no longer exists
+- All passwords and files are permanently lost
+- Google Drive authentication is cleared
+- BlankDrive CLI remains installed
+
+To use BlankDrive again:
+
+```bash
+BLANK init
+```
+
+This creates a new vault from scratch with a new master password.
+
+## Data Recovery
+
+<Warning>
+  **There is NO data recovery** after running `destruct`. BlankDrive does not maintain backups outside of your vault and Google Drive.
+</Warning>
+
+If you accidentally run this command, data cannot be recovered unless:
+- You have manual backups of `~/.slasshy/` created outside BlankDrive
+- You exported passwords/files before destruction
+- Google Drive has file versioning enabled (unlikely for app data)
+
+## Related Commands
+
+- [init](/commands/init) - Initialize a new vault
+- [delete](/commands/delete) - Delete specific entries (not the entire vault)
+- [lock](/commands/lock) - Lock the vault (reversible)
+- [auth](/commands/auth) - Manage Google Drive authentication
