@@ -1,0 +1,147 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "BlankDrive",
+  "projectDescription": "Client-side zero-knowledge encrypted vault for passwords and files with Google Drive sync",
+  "theme": "aspen",
+  "primaryColor": "#4B0082",
+  "lightColor": null,
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/google-oauth-setup",
+              "guides/vault-management",
+              "guides/cloud-storage",
+              "guides/desktop-app",
+              "guides/web-ui"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "security/encryption",
+              "security/key-derivation",
+              "security/trust-model"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Core Commands",
+            "pages": [
+              "commands/init",
+              "commands/auth",
+              "commands/lock",
+              "commands/status"
+            ]
+          },
+          {
+            "group": "Vault Operations",
+            "pages": [
+              "commands/add",
+              "commands/get",
+              "commands/list",
+              "commands/edit",
+              "commands/delete"
+            ]
+          },
+          {
+            "group": "File Management",
+            "pages": [
+              "commands/upload",
+              "commands/download"
+            ]
+          },
+          {
+            "group": "Notes & Favorites",
+            "pages": [
+              "commands/note",
+              "commands/favorite"
+            ]
+          },
+          {
+            "group": "Security Tools",
+            "pages": [
+              "commands/generate",
+              "commands/audit"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "commands/settings",
+              "commands/web",
+              "commands/desktop",
+              "commands/update",
+              "commands/destruct"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Additional Info",
+            "pages": [
+              "troubleshooting",
+              "faq",
+              "changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Zero-knowledge client-side encryption with AES-256-GCM",
+    "Argon2id key derivation function",
+    "Google Drive sync with OAuth 2.0 PKCE",
+    "Password, note, and file vault management",
+    "TOTP/2FA support",
+    "Password strength auditing and breach checking",
+    "Interactive CLI shell",
+    "Local web UI and desktop application",
+    "Steganography support",
+    "Cloud storage modes (public/hidden)"
+  ],
+  "publicApiSurface": [
+    "blankdrive init",
+    "blankdrive auth",
+    "blankdrive add",
+    "blankdrive get",
+    "blankdrive list",
+    "blankdrive upload",
+    "blankdrive download",
+    "blankdrive edit",
+    "blankdrive delete",
+    "blankdrive note",
+    "blankdrive favorite",
+    "blankdrive audit",
+    "blankdrive generate",
+    "blankdrive settings",
+    "blankdrive web",
+    "blankdrive desktop",
+    "blankdrive update",
+    "blankdrive lock",
+    "blankdrive status",
+    "blankdrive destruct"
+  ]
+}
